@@ -76,7 +76,7 @@ fn block_element(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
         }
         "ul" => render_list(node, ctx, false, depth),
         "ol" => render_list(node, ctx, true, depth),
-        "dl" => render_dl(node, ctx),
+        "dl" => render_dl(node, ctx, depth),
         "pre" => render_pre(node),
         "blockquote" => render_blockquote(node, ctx, depth),
         "table" => render_table(node, ctx),
@@ -190,7 +190,12 @@ fn render_list(node: &NodeRef, ctx: &Ctx, ordered: bool, depth: usize) -> String
 }
 
 /// Definition list: term in bold, each definition on a `: ` line (pandoc style).
-fn render_dl(node: &NodeRef, ctx: &Ctx) -> String {
+///
+/// `<dd>` bodies are rendered as blocks, not forced inline: API-reference
+/// docs (e.g. Sphinx) routinely nest paragraphs, code examples, and even
+/// sub-lists inside a single `<dd>`, and flattening those to one line of text
+/// destroys code fences and structure entirely.
+fn render_dl(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
     let mut out = String::new();
     for child in node.children() {
         match element_name(&child).as_deref() {
@@ -202,10 +207,18 @@ fn render_dl(node: &NodeRef, ctx: &Ctx) -> String {
                 }
             }
             Some("dd") => {
-                let def = inline_children(&child, ctx);
-                let def = def.trim();
-                if !def.is_empty() {
-                    out.push_str(&format!(": {def}\n"));
+                let body = render_children_as_blocks(&child, ctx, depth);
+                let body = body.trim();
+                if !body.is_empty() {
+                    let mut lines = body.lines();
+                    if let Some(first) = lines.next() {
+                        out.push_str(&format!(": {first}\n"));
+                    }
+                    for line in lines {
+                        out.push_str(line);
+                        out.push('\n');
+                    }
+                    out.push('\n');
                 }
             }
             _ => {}

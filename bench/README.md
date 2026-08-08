@@ -63,9 +63,10 @@ Run all of them together: `./.venv/bin/python bench.py --tools distill,jina,traf
 
 ## Corpus
 
-`corpus.jsonl` — one JSON object per line: `{id, bucket, url}`. Buckets are
-deliberately weighted toward incumbent failure modes: `article`, `docs`,
-`product`, `forum`, `table`, `spa`. Add your own URLs freely.
+`corpus.jsonl` — one JSON object per line: `{id, bucket, url}`. 50 URLs
+across six buckets, deliberately weighted toward incumbent failure modes:
+`article`, `docs`, `product`, `forum`, `table`, `spa`. Add your own URLs
+freely.
 
 ## Interpreting results (important)
 
@@ -89,37 +90,83 @@ deliberately weighted toward incumbent failure modes: `article`, `docs`,
   averages. A ratio >1.0 (e.g. Jina links/images) means the tool emitted more
   than the content-scoped source had — i.e. boilerplate inflation, not fidelity.
 
-## Known findings (distill vs 4 alternatives, 9 URLs, basics+structural+efficiency)
+## Known findings (distill vs 4 alternatives, 50 URLs, basics+structural+efficiency)
+
+This corpus grew from an initial 9 URLs to 50 across the same six buckets,
+specifically to move past small-sample noise and get a defensible read on
+distill vs the field. Along the way it caught three real product bugs and
+three benchmark ground-truth bugs — full list, in the order found:
+
+**Product bugs (fixed):**
+
+1. **`src/extract.rs`** — sibling-merging only looked one DOM level up, so
+   content split across sibling wrapper `<div>`s (e.g. MDN's
+   `layout__header`/`layout__body` split) was stranded outside the merged
+   container and silently dropped. Fixed by climbing ancestors while the
+   merged candidate captures too little of the page's total scored content
+   (`COVERAGE_THRESHOLD`, capped by `MAX_CLIMBS`).
+2. **`src/convert.rs`** — `render_dl` always rendered `<dd>` content as a
+   single inline run, which destroyed nested `<pre>` code blocks,
+   paragraphs, and lists inside Sphinx-style API reference entries (e.g.
+   Python's own docs put full method examples inside `<dd>`). Fixed by
+   rendering `<dd>` bodies as blocks.
+3. **`src/lib.rs`** — `needs_render`'s auto-render heuristic only checked
+   raw body word count and a fixed list of known SPA mount points
+   (`#root`, `#__next`, etc). Nav-heavy marketing pages have plenty of body
+   text that's all chrome (e.g. redis.io: 946 words, real content ~80
+   chars), and modern Next.js App Router pages don't render `#__next` at
+   all, so both checks missed real under-rendered pages. Fixed by running
+   the actual extraction pipeline as the trigger signal instead of
+   guessing from word counts — caught and fixed a real under-extraction
+   case (`redis-home`: 150 chars → 7,390 chars). One related, *unfixed*
+   limitation: a small number of heavy client-rendered docs sites
+   (`terraform-syntax-docs`) still don't finish populating within the
+   current 8s headless-Chrome render budget — a timing/completeness issue,
+   not a detection issue.
+
+**Benchmark bugs (fixed, not product issues):**
+
+4. `_TABLE_SEP` in `metrics.py` matched bare `---` lines without a leading
+   `|`, which accidentally counted trafilatura's YAML frontmatter
+   delimiters as tables (its runner is the only one built with
+   `with_metadata=True`). Inflated its table-fidelity score to 0.95 —
+   fixed by requiring the leading pipe real GFM tables use.
+5. `expected_features()` counted every `<table>` in `<body>`, including
+   MediaWiki `navbox`-classed and `role="presentation"` tables — pure
+   navigation chrome that just isn't wrapped in a semantic `<nav>` tag.
+   That penalized every tool for correctly *not* extracting boilerplate,
+   and let jina's fabricated pseudo-tables (it converts some navbox
+   link-lists into single-column Markdown tables that don't correspond to
+   any real source `<table>`) count as wins. Fixed by excluding both.
+6. `expected_features()` also counted `<pre>` blocks nested inside table
+   cells as "expected" code blocks — but a GFM table cell is one line, so
+   no tool can represent that as a real fenced block without breaking the
+   table. Fixed by excluding table-nested `<pre>`.
+
+Current numbers (50 URLs, all fixes applied):
 
 | tool | coverage | avg tokens | table fidelity | code-block fidelity | local? |
 |---|---|---|---|---|---|
-| distill | 100% | 7,715 | 0.36 | 0.41 | yes |
-| jina | 100% | 15,096 | 0.77 | 0.00 | no (cloud) |
-| trafilatura | 100% | 8,185 | **0.95** | 0.41 | yes |
-| readability | 89% | 4,338 | 0.29 | 0.00 | yes |
-| markitdown | 67%* | 4,609 | 0.92 | **0.73** | yes |
+| **distill** | 92% | 15,251 | 0.62 | **0.94** | yes |
+| jina | 100%* | 23,282 | 0.27 | 0.17 | no (cloud) |
+| trafilatura | 92% | 14,610 | 0.18 | 0.69 | yes |
+| readability | 80% | 8,417 | 0.00 | 0.00 | yes |
+| markitdown | 66% | 12,690 | 0.57 | 0.68 | yes |
 
-\* markitdown's low coverage is 403/404s on Wikipedia and react.dev (no
-browser-like headers, no JS render), not a fidelity gap on pages it fetched.
+\* jina's coverage is real, but its links/headings/images ratios all sit at
+0.9-1.13 — it's keeping boilerplate its struct mean rewards; on the two
+high-signal features (tables, code) it's the weakest tool of the five.
 
-- distill and trafilatura are the only tools with 100% coverage *and* fully
-  local, no-API-key operation.
-- distill is the fastest end-to-end (648ms avg) and leanest well-formed
-  output among tools that reliably fetch every page; trafilatura is close on
-  speed and comparable on tokens.
-- **distill's weakest point vs the field: table and code-block fidelity.**
-  trafilatura keeps 95% of tables vs distill's 36%; markitdown keeps 73% of
-  code blocks vs distill's 41%. Both beat distill precisely on the
-  "docs/tables" use case distill's own README says agents need most —
-  confirms structural fidelity is the right thing to prioritize next, not a
-  self-serving claim.
-- jina keeps the most tables (0.77) via JS rendering but drops all code
-  blocks (0.00) and nearly triples output tokens — a cost/completeness
-  tradeoff, not a clean win.
-- readability (the classic reader-mode pipeline) is the weakest overall:
-  worst coverage (89%), worst link/heading retention, and real
-  under-extraction (e.g. py-json-docs: 1,101 tokens vs distill's 7,906) rather
-  than genuine efficiency.
+- **At this scale, distill leads decisively on both high-signal structural
+  features** — no longer a "matches once artifacts are removed" result
+  like the 9-URL corpus, but a clear lead against every alternative,
+  local or cloud.
+- distill's own coverage (92%) has four real failures, none of them
+  extraction bugs: one dead URL (404), two StackOverflow bot-blocks (403),
+  and the one known render-budget limitation above.
+- readability (the classic reader-mode pipeline) remains the weakest
+  overall: worst link/heading retention and real under-extraction on some
+  pages, not genuine efficiency.
 - Full per-page numbers: `results/scorecard.md` and `results/results.json`.
   Content-quality (gold-F1) and agent-QA layers still need gold files /
   `ANTHROPIC_API_KEY` to run — open question until then.

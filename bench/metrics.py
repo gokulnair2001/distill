@@ -42,7 +42,7 @@ _LINK = re.compile(r"(?<!\!)\[[^\]]+\]\([^)]+\)")
 _IMG = re.compile(r"!\[[^\]]*\]\([^)]+\)")
 _FENCE = re.compile(r"^```", re.MULTILINE)
 _HEADING = re.compile(r"^#{1,6}\s", re.MULTILINE)
-_TABLE_SEP = re.compile(r"^\s*\|?\s*:?-{2,}", re.MULTILINE)
+_TABLE_SEP = re.compile(r"^\s*\|\s*:?-{2,}", re.MULTILINE)
 
 
 def md_features(md: str) -> dict:
@@ -78,12 +78,27 @@ def expected_features(html: str) -> dict:
     for tag in soup(["script", "style", "noscript", "nav", "footer", "aside", "header"]):
         tag.decompose()
     body = soup.body or soup
+    # Layout/navigation tables aren't wrapped in semantic <nav> everywhere
+    # (e.g. MediaWiki navboxes are plain `<table class="navbox-inner">`), so
+    # they'd otherwise count as "expected content" that every extractor is
+    # penalized for correctly dropping. Exclude tables that explicitly
+    # declare themselves non-content (role="presentation") or match the
+    # well-known MediaWiki navbox convention.
+    real_tables = [
+        t for t in body.find_all("table")
+        if t.get("role") != "presentation"
+        and "navbox" not in " ".join(t.get("class") or [])
+    ]
+    # A <pre> nested inside a table cell can't become a real fenced code
+    # block without breaking the table (a GFM table cell is one line) — no
+    # extractor can win this, so it isn't a fair "expected" target.
+    real_pres = [p for p in body.find_all("pre") if p.find_parent("table") is None]
     return {
         "links": len(body.find_all("a", href=True)),
         "images": len(body.find_all("img")),
-        "code_blocks": len(body.find_all("pre")),
+        "code_blocks": len(real_pres),
         "headings": len(body.find_all(re.compile("^h[1-6]$"))),
-        "tables": len(body.find_all("table")),
+        "tables": len(real_tables),
     }
 
 
