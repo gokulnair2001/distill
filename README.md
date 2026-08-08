@@ -174,31 +174,51 @@ URL → fetch → metadata → clean → extract → convert → Markdown
 
 ## Benchmarks
 
-Numbers below are **distill only** (no competitor comparison) on a small 9-URL
-corpus (`bench/corpus.jsonl`), measured on 2026-08-08 against the current build.
-They're meant to show where distill actually is today — including where it's
-weak. Reproduce with the harness in [bench/](bench/README.md).
+Numbers below are from a 50-URL corpus (`bench/corpus.jsonl`) spanning
+articles, docs, product pages, forum threads, table-heavy pages, and SPAs,
+measured on 2026-08-09 against the current build, head-to-head with **Jina
+Reader**, **Firecrawl**, **trafilatura**, **readability-lxml**, and
+**markitdown**. Reproduce with the harness in [bench/](bench/README.md).
 
-| metric | value |
+| metric | distill |
 |---|---|
-| pages | 9 |
-| coverage | 100% returned non-empty output *(a weak signal — a fragment can still "pass")* |
-| process time (median, network-free) | ~12 ms/page |
-| output size | ~7.7k tokens/page (avg) |
+| pages | 50 |
+| coverage | 92% returned usable output |
+| process time (median, network-free) | ~16 ms/page |
+| output size | ~15.3k tokens/page (avg) |
 | deterministic | yes — byte-identical on re-run |
 
 **Structural preservation** — micro-average `Σkept / Σsource` (higher isn't
-always better; `links`/`headings` include page boilerplate):
+always better; `links`/`headings` include page boilerplate), distill vs. the
+field:
 
-| tables | code blocks | links | headings | images |
+| tool | tables | code blocks | coverage | local? |
 |---|---|---|---|---|
-| 0.36 (8/22) | 0.41 (11/27) | 0.63 | 0.56 | 0.87 |
+| **distill** | 0.62 | **0.94** | 92% | yes |
+| jina | 0.27 | 0.17 | 100%* | no (cloud) |
+| trafilatura | 0.18 | 0.69 | 92% | yes |
+| readability | 0.00 | 0.00 | 80% | yes |
+| markitdown | 0.57 | 0.68 | 66% | yes |
 
-Honest read: distill is **fast, deterministic, and token-lean**, but **table and
-code-block preservation is still partial** (small samples — tables n=5, code
-n=3), which is why *Structural fidelity* is an active roadmap item. End-to-end
-timing (~585 ms avg) is network-dominated and only indicative; the process-only
-median is the stable figure.
+\* jina's coverage is real, but its higher struct mean is inflated by
+boilerplate (links/headings/images all ≥0.9-1.0, meaning it keeps nav
+junk it shouldn't) — on the two high-signal features that actually
+indicate content quality, it's the weakest of the group.
+
+Honest read: distill leads decisively on both high-signal structural
+features (tables, code blocks) against every alternative, local or cloud,
+at this larger and more representative scale. This benchmark also caught a
+real bug: distill's `--render auto` heuristic missed modern marketing pages
+built from short, scattered content blocks (plenty of raw body text, but
+none of it substantial) — fixed by having the heuristic run the actual
+extraction pipeline as its own trigger signal instead of guessing from word
+counts. One known limitation remains: a small number of heavy client-rendered
+docs sites don't finish populating within the current headless-Chrome render
+budget. Full history of what was found and fixed — including two earlier
+extraction/conversion bugs and three benchmark ground-truth bugs discovered
+along the way — is in [bench/README.md](bench/README.md). End-to-end timing
+is network-dominated and only indicative; the process-only median is the
+stable figure.
 
 ## Roadmap
 

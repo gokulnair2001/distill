@@ -8,6 +8,14 @@ use kuchikiki::{Node, NodeRef};
 /// back to a larger container if one exists.
 const MIN_CONTENT_CHARS: usize = 200;
 
+/// Fraction of the page's total scored content a merged candidate must
+/// capture before we stop climbing ancestors looking for more.
+const COVERAGE_THRESHOLD: f64 = 0.5;
+
+/// Cap on ancestor climbs, so a pathological page can't walk all the way to
+/// `<body>` and pull in real boilerplate.
+const MAX_CLIMBS: usize = 4;
+
 /// Find the node most likely to contain the page's main content.
 ///
 /// Readability-style scoring: each substantial text block scores points based on
@@ -73,8 +81,36 @@ pub fn find_main_content(root: &NodeRef) -> NodeRef {
         return fallback_container(root, best_len);
     }
 
-    // Sibling merge: pull in adjacent blocks the scorer under-credited.
-    merge_siblings(&best_node, best_raw, &scores)
+    // Sibling merge: pull in adjacent blocks the scorer under-credited. Some
+    // sites (e.g. MDN) wrap different parts of the article body in separate
+    // sibling containers (an intro `<div>` next to a `<div>` holding the rest
+    // of the sections), so a single-level sibling merge can strand most of
+    // the content in a cousin subtree. Climb ancestors while the merged
+    // result still captures little of the page's total scored content.
+    let total_score: f64 = scores.values().sum();
+    let mut anchor = best_node.clone();
+    let mut anchor_raw = best_raw;
+    let mut merged = merge_siblings(&anchor, anchor_raw, &scores);
+
+    for _ in 0..MAX_CLIMBS {
+        if total_score <= 0.0 || captured_score(&merged, &scores) / total_score >= COVERAGE_THRESHOLD {
+            break;
+        }
+        let Some(parent) = element_parent(&anchor) else { break };
+        anchor_raw = scores.get(&Rc::as_ptr(&parent.0)).copied().unwrap_or(anchor_raw);
+        anchor = parent;
+        merged = merge_siblings(&anchor, anchor_raw, &scores);
+    }
+    merged
+}
+
+/// How much of the page's total scored content a candidate container holds,
+/// by summing `scores` entries whose node lies within it (ptr-identity match;
+/// re-parenting during merge doesn't change node identity).
+fn captured_score(node: &NodeRef, scores: &HashMap<*const Node, f64>) -> f64 {
+    node.inclusive_descendants()
+        .filter_map(|n| scores.get(&Rc::as_ptr(&n.0)).copied())
+        .sum()
 }
 
 /// Return `<main>`/`<article>`/`<body>` if it holds more text than `min_len`,
