@@ -1,2 +1,6 @@
 requests>=2.31
 beautifulsoup4>=4.12
+trafilatura>=2.2
+readability-lxml>=0.8
+html2text>=2025.4
+markitdown>=0.1

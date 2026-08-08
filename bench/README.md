@@ -1,8 +1,10 @@
 # distill benchmark harness
 
-Scores `distill` against cloud competitors (**Jina Reader**, **Firecrawl**) over a
-bucketed URL corpus, across five layers. Its job is to turn "the output looks good"
-into defensible numbers — and to expose where distill loses.
+Scores `distill` against cloud competitors (**Jina Reader**, **Firecrawl**) and
+local/offline alternatives (**trafilatura**, **readability-lxml + html2text**,
+**markitdown**) over a bucketed URL corpus, across five layers. Its job is to
+turn "the output looks good" into defensible numbers — and to expose where
+distill loses.
 
 ## Quick start
 
@@ -10,8 +12,15 @@ into defensible numbers — and to expose where distill loses.
 cd bench
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python bench.py --tools distill,jina        # runs now, no keys
+cargo build --release --manifest-path ../Cargo.toml   # needed for the distill runner
+
+./.venv/bin/python bench.py --tools distill,jina,trafilatura,readability,markitdown
 ```
+
+`--tools` accepts any subset of `distill,jina,firecrawl,trafilatura,readability,markitdown`
+(default is `distill,jina,firecrawl`). A tool that's missing a binary/key/package
+is skipped with a one-line reason instead of failing the run — safe to always
+pass the full list.
 
 Results print as a scorecard and are written to `results/` (`results.json`,
 `scorecard.md`, and per-tool raw Markdown under `results/raw/`).
@@ -27,6 +36,19 @@ Results print as a scorecard and are written to `results/` (`results.json`,
 | `qa` | ⭐ agent answer accuracy from each tool's output | `ANTHROPIC_API_KEY` |
 
 Run a subset: `--layers basics,structural`. Limit URLs: `--limit 3`.
+
+## Alternatives covered
+
+| Tool | Type | Notes |
+|---|---|---|
+| `jina` | Cloud API | r.jina.ai, renders JS, no key needed (rate-limited) |
+| `firecrawl` | Cloud API | Needs `FIRECRAWL_API_KEY` |
+| `trafilatura` | Local, offline | Popular Python extraction library |
+| `readability` | Local, offline | readability-lxml + html2text — the classic "reader mode" pipeline many tools wrap |
+| `markitdown` | Local, offline | Microsoft's HTML/doc→Markdown tool; closest direct competitor (same "agent-ready Markdown" goal, no boilerplate stripping) |
+
+Install local alternatives via `requirements.txt` (already includes them).
+Run all of them together: `./.venv/bin/python bench.py --tools distill,jina,trafilatura,readability,markitdown`.
 
 ## Enabling the gated pieces
 
@@ -67,8 +89,37 @@ deliberately weighted toward incumbent failure modes: `article`, `docs`,
   averages. A ratio >1.0 (e.g. Jina links/images) means the tool emitted more
   than the content-scoped source had — i.e. boilerplate inflation, not fidelity.
 
-## Known findings (initial distill vs Jina run, 9 URLs)
+## Known findings (distill vs 4 alternatives, 9 URLs, basics+structural+efficiency)
 
-- distill: ~2× faster, ~½ the tokens, deterministic.
-- Jina: wins SPA coverage (renders JS), keeps more tables/images (+ more boilerplate).
-- Open question: true content quality — resolved only once gold-F1 / QA layers run.
+| tool | coverage | avg tokens | table fidelity | code-block fidelity | local? |
+|---|---|---|---|---|---|
+| distill | 100% | 7,715 | 0.36 | 0.41 | yes |
+| jina | 100% | 15,096 | 0.77 | 0.00 | no (cloud) |
+| trafilatura | 100% | 8,185 | **0.95** | 0.41 | yes |
+| readability | 89% | 4,338 | 0.29 | 0.00 | yes |
+| markitdown | 67%* | 4,609 | 0.92 | **0.73** | yes |
+
+\* markitdown's low coverage is 403/404s on Wikipedia and react.dev (no
+browser-like headers, no JS render), not a fidelity gap on pages it fetched.
+
+- distill and trafilatura are the only tools with 100% coverage *and* fully
+  local, no-API-key operation.
+- distill is the fastest end-to-end (648ms avg) and leanest well-formed
+  output among tools that reliably fetch every page; trafilatura is close on
+  speed and comparable on tokens.
+- **distill's weakest point vs the field: table and code-block fidelity.**
+  trafilatura keeps 95% of tables vs distill's 36%; markitdown keeps 73% of
+  code blocks vs distill's 41%. Both beat distill precisely on the
+  "docs/tables" use case distill's own README says agents need most —
+  confirms structural fidelity is the right thing to prioritize next, not a
+  self-serving claim.
+- jina keeps the most tables (0.77) via JS rendering but drops all code
+  blocks (0.00) and nearly triples output tokens — a cost/completeness
+  tradeoff, not a clean win.
+- readability (the classic reader-mode pipeline) is the weakest overall:
+  worst coverage (89%), worst link/heading retention, and real
+  under-extraction (e.g. py-json-docs: 1,101 tokens vs distill's 7,906) rather
+  than genuine efficiency.
+- Full per-page numbers: `results/scorecard.md` and `results/results.json`.
+  Content-quality (gold-F1) and agent-QA layers still need gold files /
+  `ANTHROPIC_API_KEY` to run — open question until then.
