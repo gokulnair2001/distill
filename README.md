@@ -25,10 +25,27 @@ your machine.
 
 ## Install
 
+Published as **`distill-md`** (the `distill` name is taken on crates.io/npm);
+the installed command is still `distill`.
+
 ```bash
-cargo build --release
-# binary at ./target/release/distill
+# Agents (MCP server) — no install, always latest
+npx -y -p distill-md distill-mcp
+
+# Shell installer (macOS / Linux) — prebuilt, no toolchain
+curl -LsSf https://github.com/gokulnair2001/distill/releases/latest/download/distill-md-installer.sh | sh
+
+# Rust toolchain
+cargo binstall distill-md      # prebuilt
+cargo install distill-md       # from source
+
+# From this repo
+cargo build --release --features mcp   # binaries at ./target/release/{distill,distill-mcp}
 ```
+
+Prebuilt binaries for macOS (arm64/x64), Linux (arm64/x64), and Windows (x64)
+are attached to every [GitHub Release](https://github.com/gokulnair2001/distill/releases).
+See [RELEASING.md](RELEASING.md) for how releases are produced.
 
 ## Usage
 
@@ -96,9 +113,14 @@ cargo build --release --features mcp
 # binary at ./target/release/distill-mcp
 ```
 
-Register it with Claude Code:
+Register it with Claude Code — zero-install via npx (once published), or a
+local build:
 
 ```bash
+# Published: no install, always latest
+claude mcp add distill -- npx -y -p distill-md distill-mcp
+
+# Local build
 claude mcp add distill -- /absolute/path/to/target/release/distill-mcp
 ```
 
@@ -108,11 +130,15 @@ Or add it to an `mcp.json` yourself:
 {
   "mcpServers": {
     "distill": {
-      "command": "/absolute/path/to/target/release/distill-mcp"
+      "command": "npx",
+      "args": ["-y", "-p", "distill-md", "distill-mcp"]
     }
   }
 }
 ```
+
+(`-p distill-md distill-mcp` selects the `distill-mcp` binary from the
+`distill-md` package, which also provides the `distill` CLI.)
 
 ### SSRF guard
 
