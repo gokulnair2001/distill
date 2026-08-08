@@ -1,5 +1,28 @@
 use url::Url;
 
+/// When to use a headless browser to render JavaScript before extracting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RenderMode {
+    /// Never render; static fetch only (fastest).
+    Never,
+    /// Render only when the static HTML looks under-rendered (SPA shell).
+    #[default]
+    Auto,
+    /// Always render with a headless browser.
+    Always,
+}
+
+impl RenderMode {
+    pub fn parse(s: &str) -> Option<RenderMode> {
+        match s.to_ascii_lowercase().as_str() {
+            "never" | "off" | "none" => Some(RenderMode::Never),
+            "auto" => Some(RenderMode::Auto),
+            "always" | "on" | "force" => Some(RenderMode::Always),
+            _ => None,
+        }
+    }
+}
+
 /// Conversion options controlling what ends up in the Markdown.
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -11,6 +34,8 @@ pub struct Options {
     pub frontmatter: bool,
     /// Skip main-content extraction and convert the whole cleaned body (debug/raw mode).
     pub raw: bool,
+    /// Whether/when to render JavaScript with a headless browser.
+    pub render: RenderMode,
     /// Base URL used to resolve relative links/images to absolute URLs.
     pub base_url: Option<Url>,
 }
@@ -22,6 +47,7 @@ impl Default for Options {
             include_images: true,
             frontmatter: true,
             raw: false,
+            render: RenderMode::default(),
             base_url: None,
         }
     }

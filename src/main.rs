@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use distill::types::Options;
+use distill::types::{Options, RenderMode};
 use distill::{distill_html, distill_url, parse_base};
 
 /// distill — convert any website into clean, agent-ready Markdown.
@@ -34,6 +34,11 @@ struct Cli {
     #[arg(long)]
     raw: bool,
 
+    /// JS rendering: never | auto | always (default: auto). Renders SPA pages
+    /// with a headless browser only when needed. Ignored for file/stdin input.
+    #[arg(long, default_value = "auto")]
+    render: String,
+
     /// Write output to a file instead of stdout.
     #[arg(short, long)]
     output: Option<String>,
@@ -42,11 +47,14 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    let render = RenderMode::parse(&cli.render)
+        .with_context(|| format!("invalid --render value: {} (use never|auto|always)", cli.render))?;
     let mut opts = Options {
         include_links: !cli.no_links,
         include_images: !cli.no_images,
         frontmatter: !cli.no_frontmatter,
         raw: cli.raw,
+        render,
         base_url: None,
     };
     if let Some(b) = &cli.base {

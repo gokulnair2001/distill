@@ -1,0 +1,9 @@
+{"id": "wiki-markdown", "bucket": "article", "url": "https://en.wikipedia.org/wiki/Markdown"}
+{"id": "rust-1.0-blog", "bucket": "article", "url": "https://blog.rust-lang.org/2015/05/15/Rust-1.0/"}
+{"id": "py-json-docs", "bucket": "docs", "url": "https://docs.python.org/3/library/json.html"}
+{"id": "mdn-http-methods", "bucket": "docs", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods"}
+{"id": "pg-about", "bucket": "product", "url": "https://www.postgresql.org/about/"}
+{"id": "hn-item", "bucket": "forum", "url": "https://news.ycombinator.com/item?id=1"}
+{"id": "wiki-pop-table", "bucket": "table", "url": "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"}
+{"id": "react-dev", "bucket": "spa", "url": "https://react.dev/"}
+{"id": "vuejs", "bucket": "spa", "url": "https://vuejs.org/"}

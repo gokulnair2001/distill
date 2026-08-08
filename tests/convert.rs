@@ -90,6 +90,28 @@ fn frontmatter_carries_metadata() {
 }
 
 #[test]
+fn captures_content_split_across_siblings() {
+    // Sibling merge / container fallback must not drop adjacent content blocks.
+    let html = r#"<body>
+      <div><p>First block paragraph with sufficiently many words to score as real content number one here.</p></div>
+      <div><p>Second block paragraph with sufficiently many words to score as real content number two here.</p></div>
+    </body>"#;
+    let out = md(html);
+    assert!(out.contains("content number one"), "lost first block: {out}");
+    assert!(out.contains("content number two"), "lost second block: {out}");
+}
+
+#[test]
+fn render_mode_parses() {
+    use distill::RenderMode;
+    assert_eq!(RenderMode::parse("never"), Some(RenderMode::Never));
+    assert_eq!(RenderMode::parse("AUTO"), Some(RenderMode::Auto));
+    assert_eq!(RenderMode::parse("always"), Some(RenderMode::Always));
+    assert_eq!(RenderMode::parse("bogus"), None);
+    assert_eq!(RenderMode::default(), RenderMode::Auto);
+}
+
+#[test]
 fn no_links_flag_keeps_text_only() {
     let mut o = opts();
     o.include_links = false;

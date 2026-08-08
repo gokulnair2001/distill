@@ -2,3 +2,8 @@
 **/*.rs.bk
 Cargo.lock.bak
 .DS_Store
+
+# bench
+bench/.venv/
+bench/results/
+**/__pycache__/

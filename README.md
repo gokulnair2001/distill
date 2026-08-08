@@ -44,6 +44,7 @@ curl -s https://example.com | distill -
 
 # Options
 distill <url> \
+  --render auto \      # JS rendering: never | auto | always (default: auto)
   --no-frontmatter \   # omit the YAML metadata block
   --no-links \         # keep link text only
   --no-images \        # drop images
@@ -51,6 +52,21 @@ distill <url> \
   --base <url> \       # base for resolving relative links
   -o out.md            # write to a file
 ```
+
+### JavaScript rendering
+
+Client-rendered pages (SPAs whose content is injected by JS) return an empty
+shell over plain HTTP. `distill` handles this **static-first**: it fetches
+statically (~10 ms) and, in `--render auto`, only spins up a headless browser
+when the page looks under-rendered (empty `#root`/`#app`, near-empty body).
+`--render always` forces it; `--render never` disables it.
+
+Requires an installed Chrome/Chromium/Brave/Edge; set `DISTILL_CHROME` to point
+at a specific binary. If none is found, distill falls back to the static HTML.
+
+> Note: statically pre-rendered sites (Next.js/VitePress SSG, most docs sites)
+> already contain their content, so rendering them changes nothing — it only
+> helps genuinely client-rendered pages.
 
 ## How it works
 
@@ -74,12 +90,14 @@ no network round-trip.
 
 ## Roadmap
 
-- [ ] **JS rendering** — static-first, headless-Chromium fallback only when the
+- [x] **JS rendering** — static-first, headless-Chrome fallback only when the
       DOM looks under-rendered (SPA coverage without paying browser cost per page).
+- [x] **Benchmark harness** — scored corpus vs Jina / Firecrawl (see `bench/`).
 - [ ] **Page-type awareness** — distinct strategies for docs / listings / tables.
+- [ ] **Structural fidelity** — definition lists, table colspan/rowspan, inline
+      code backtick escaping, `<picture>`/`srcset`.
 - [ ] **MCP server** — expose `distill` as a tool any local agent can call.
 - [ ] **Structured extraction** — schema-guided JSON output + RAG chunking.
-- [ ] **Benchmark harness** — scored corpus vs Jina / Firecrawl / trafilatura.
 
 ## Development
 

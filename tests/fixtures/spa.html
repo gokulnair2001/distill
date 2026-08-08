@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><title>SPA Demo</title></head>
+<body>
+  <div id="root"></div>
+  <script>
+    const el = document.getElementById('root');
+    el.innerHTML =
+      '<article><h1>Client Rendered Title</h1>' +
+      '<p>This paragraph was injected by JavaScript after load and is not present ' +
+      'in the static HTML source at all. It contains more than enough words to be ' +
+      'selected as the main content by the extraction scorer during conversion.</p>' +
+      '<p>A second injected paragraph with additional detail so the client-rendered ' +
+      'body is clearly substantial and unmistakably the main article of this page.</p>' +
+      '</article>';
+  </script>
+</body>
+</html>
