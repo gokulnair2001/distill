@@ -88,6 +88,11 @@ fn maybe_render(url: &str, static_html: String, opts: &Options) -> String {
     }
 }
 
+/// Below this many extracted content characters, the page is treated as
+/// under-rendered even if the raw body has plenty of text (matches
+/// `extract::MIN_CONTENT_CHARS`'s notion of "too little to trust").
+const MIN_RENDERED_CONTENT_CHARS: usize = 200;
+
 /// Heuristic: does this static HTML look like an under-rendered SPA shell?
 fn needs_render(html: &str) -> bool {
     let dom = kuchikiki::parse_html().one(html);
@@ -112,7 +117,20 @@ fn needs_render(html: &str) -> bool {
             }
         }
     }
-    false
+
+    // Word count alone is fooled by nav-heavy marketing pages: plenty of
+    // body text, but it's all chrome (nav links, footer, short scattered
+    // blurbs) and the real extractor still can't find a substantial content
+    // region — e.g. modern Next.js App Router pages have no `#__next`
+    // wrapper, so the mount-point check above misses them too. Run the same
+    // extraction the real pipeline uses and check its output directly,
+    // rather than guessing from raw body text.
+    clean::clean(&dom);
+    let extracted_len = extract::find_main_content(&dom)
+        .text_contents()
+        .chars()
+        .count();
+    extracted_len < MIN_RENDERED_CONTENT_CHARS
 }
 
 /// Parse a `--base` override into a URL.
