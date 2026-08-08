@@ -223,4 +223,4 @@ cargo build --release
 
 ## License
 
-[MIT](https://github.com/gokulnair2001/distill/blob/main/LICENSE)
+GNU General Public License v3.0 or later — see [LICENSE](LICENSE).
