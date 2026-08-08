@@ -1,0 +1,26 @@
+[package]
+name = "distill"
+version = "0.1.0"
+edition = "2021"
+description = "Convert any website into clean, agent-ready Markdown. Local-first, fast, deterministic."
+license = "MIT"
+
+# NOTE: the crate name `distill` is taken on crates.io (an asset pipeline).
+# This is fine for local builds; pick a publish name later (e.g. `distill-md`).
+[[bin]]
+name = "distill"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "gzip", "brotli", "deflate", "rustls-tls"] }
+kuchikiki = "0.8"
+url = "2"
+anyhow = "1"
+regex = "1"
+once_cell = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

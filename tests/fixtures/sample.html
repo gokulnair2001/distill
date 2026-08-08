@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Widget Docs — Acme</title>
+  <meta property="og:title" content="Widget API Reference">
+  <meta name="author" content="Jane Doe">
+  <meta property="article:published_time" content="2026-01-15">
+  <meta property="og:site_name" content="Acme Docs">
+  <link rel="canonical" href="https://acme.example/docs/widget">
+</head>
+<body>
+  <header class="site-header"><nav><a href="/">Home</a> <a href="/pricing">Pricing</a></nav></header>
+  <div class="cookie-banner">We use cookies. <button>Accept</button></div>
+  <aside class="sidebar related"><h3>Related</h3><ul><li><a href="/x">X</a></li></ul></aside>
+
+  <main>
+    <article>
+      <h1>Widget API</h1>
+      <p>The <strong>Widget API</strong> lets you create widgets. See the <a href="/docs/auth">auth guide</a> first.</p>
+      <h2>Installation</h2>
+      <pre><code class="language-bash">npm install @acme/widget</code></pre>
+      <h2>Parameters</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Required</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>string</td><td>yes</td></tr>
+          <tr><td>label</td><td>string</td><td>no</td></tr>
+        </tbody>
+      </table>
+      <h2>Steps</h2>
+      <ol>
+        <li>Import the client</li>
+        <li>Configure options
+          <ul><li>Set the <code>apiKey</code></li><li>Set the region</li></ul>
+        </li>
+        <li>Call <code>create()</code></li>
+      </ol>
+      <blockquote><p>Note: rate limits apply.</p></blockquote>
+      <figure><img src="/img/diagram.png" alt="Architecture diagram"><figcaption>Fig 1</figcaption></figure>
+    </article>
+  </main>
+
+  <footer class="site-footer">© 2026 Acme. <a href="/tos">Terms</a></footer>
+  <script>console.log('tracking')</script>
+</body>
+</html>
