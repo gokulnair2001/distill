@@ -14,9 +14,12 @@ keywords = ["markdown", "html", "scraping", "mcp", "agent"]
 categories = ["command-line-utilities", "text-processing"]
 
 # Keep the library crate named `distill` regardless of the package name.
+# `cdylib` is needed for the WebAssembly build (see the `wasm` feature); `rlib`
+# keeps the crate usable by the binaries and tests as before.
 [lib]
 name = "distill"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "distill"
@@ -30,13 +33,19 @@ path = "src/bin/distill_mcp.rs"
 required-features = ["mcp"]
 
 [features]
-default = []
+# The CLI needs the network stack (fetch + JS rendering); it's on by default.
+default = ["net"]
+# Network + OS-bound pipeline (HTTP fetch, SSRF guard, headless-browser render).
+# Turned off for the WebAssembly build, which only runs the pure HTML->Markdown core.
+net = ["dep:reqwest"]
 # Expose distill as a Model Context Protocol server over stdio.
-mcp = ["dep:rmcp", "dep:tokio", "dep:schemars", "dep:serde"]
+mcp = ["net", "dep:rmcp", "dep:tokio", "dep:schemars", "dep:serde"]
+# Compile the pure `distill_html` core to WebAssembly (see `src/wasm.rs`).
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "gzip", "brotli", "deflate", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "gzip", "brotli", "deflate", "rustls-tls"], optional = true }
 kuchikiki = "0.8"
 url = "2"
 anyhow = "1"
@@ -44,11 +53,19 @@ regex = "1"
 once_cell = "1"
 encoding_rs = "0.8"
 
+# WebAssembly bindings (optional; enabled by the `wasm` feature).
+wasm-bindgen = { version = "0.2", optional = true }
+
 # MCP server (optional; enabled by the `mcp` feature).
 rmcp = { version = "3", features = ["server", "transport-io"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std", "sync"], optional = true }
 schemars = { version = "1", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
+
+# wasm-pack post-processes the module with wasm-opt; the generated code uses
+# bulk-memory ops, so enable that feature (default validation rejects them).
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O', '--enable-bulk-memory', '--enable-nontrapping-float-to-int', '--enable-sign-ext', '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue']
 
 [profile.release]
 lto = true

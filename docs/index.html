@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>distill — clean, agent-ready Markdown from any website</title>
+  <meta name="description" content="A local-first CLI and MCP server that turns any URL or HTML into clean, deterministic, structure-preserving Markdown an LLM agent can actually use." />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="distill — clean, agent-ready Markdown from any website" />
+  <meta property="og:description" content="A local-first CLI and MCP server that turns any URL or HTML into clean, deterministic Markdown." />
+  <meta property="og:url" content="https://gokulnair2001.github.io/distill/" />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2318181b'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='%23fff' font-family='monospace'>d</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { -webkit-font-smoothing: antialiased; }
+    ::selection { background: #18181b; color: #fff; }
+    .mono-tight { font-variant-ligatures: none; }
+    .copy-btn { opacity: 0; transition: opacity .15s ease; }
+    .code-wrap:hover .copy-btn { opacity: 1; }
+  </style>
+</head>
+
+<body class="bg-white text-zinc-600 font-sans">
+
+  <!-- ===== Nav ===== -->
+  <header class="sticky top-0 z-20 border-b border-zinc-200 bg-white/85 backdrop-blur">
+    <nav class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <a href="#top" class="flex items-center gap-2 font-mono text-[15px] font-semibold text-zinc-900">
+        <span class="grid h-6 w-6 place-items-center rounded-md bg-zinc-900 text-sm text-white">d</span>
+        distill
+      </a>
+      <div class="flex items-center gap-6 text-sm text-zinc-500">
+        <a href="#try" class="hidden sm:inline hover:text-zinc-900 transition">Try it</a>
+        <a href="#install" class="hover:text-zinc-900 transition">Install</a>
+        <a href="https://github.com/gokulnair2001/distill" class="hover:text-zinc-900 transition">GitHub&nbsp;↗</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top" class="mx-auto max-w-5xl px-6">
+
+    <!-- ===== Hero ===== -->
+    <section class="pt-16 pb-12 sm:pt-20">
+      <h1 class="max-w-2xl text-4xl font-bold leading-[1.1] tracking-tight text-zinc-900 sm:text-5xl">
+        Clean, agent-ready Markdown from any website.
+      </h1>
+      <p class="mt-5 max-w-xl text-lg leading-relaxed text-zinc-500">
+        <span class="font-mono text-[0.95em] text-zinc-900">distill</span> is a local-first CLI and
+        MCP server that turns a URL or raw HTML into Markdown an LLM agent can actually use —
+        boilerplate stripped, structure preserved, links resolved. Fast, private, deterministic.
+      </p>
+
+      <div class="mt-7 flex flex-wrap items-center gap-3">
+        <a href="#try" class="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 transition">Try it in the browser</a>
+        <a href="https://github.com/gokulnair2001/distill" class="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 transition">GitHub</a>
+      </div>
+
+      <!-- quick install one-liner -->
+      <div class="code-wrap group relative mt-8 max-w-xl">
+        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
+        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+      </div>
+    </section>
+
+    <!-- ===== Try it ===== -->
+    <section id="try" class="scroll-mt-20 border-t border-zinc-200 py-14">
+      <div class="flex items-baseline justify-between">
+        <h2 class="text-2xl font-semibold text-zinc-900">Try it</h2>
+        <span class="text-xs text-zinc-400">runs the real distill core, in your browser</span>
+      </div>
+      <p class="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
+        Paste HTML below and distill converts it to Markdown — the actual Rust engine compiled to
+        WebAssembly, running fully client-side. No server, nothing leaves the page.
+      </p>
+      <div class="mt-4 max-w-xl rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-relaxed text-zinc-500">
+        <span class="font-medium text-zinc-800">Note:</span> distill normally takes a
+        <span class="font-medium text-zinc-800">URL</span> and scrapes it to Markdown
+        (<span class="font-mono text-zinc-700">distill &lt;url&gt;</span>). A browser can't fetch other
+        sites directly (CORS), so this demo runs the <span class="font-medium text-zinc-800">HTML&nbsp;→&nbsp;Markdown</span>
+        step. For real URL scraping, use the CLI or MCP server below.
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">HTML in</label>
+          <textarea id="html-in" spellcheck="false"
+            class="mono-tight h-64 w-full resize-y rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-[13px] leading-relaxed text-zinc-800 focus:border-zinc-400 focus:outline-none focus:ring-0"
+            placeholder="&lt;article&gt;&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;Some &lt;a href='/x'&gt;content&lt;/a&gt;.&lt;/p&gt;&lt;/article&gt;"></textarea>
+          <div class="mt-2 flex items-center gap-3">
+            <button id="run-btn"
+              class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40 transition">
+              Distill →
+            </button>
+            <button id="sample-btn" class="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900">Load a sample</button>
+            <span id="engine-status" class="text-xs text-zinc-400"></span>
+          </div>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">Markdown out</label>
+          <pre id="md-out" class="mono-tight h-64 w-full overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-[13px] leading-relaxed text-zinc-800"><code class="text-zinc-400">Output appears here…</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <section class="border-t border-zinc-200 py-14">
+      <div class="grid gap-x-10 gap-y-7 sm:grid-cols-2">
+        <div>
+          <h3 class="font-semibold text-zinc-900">Local &amp; private</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">No cloud, no per-page cost. Nothing leaves your machine.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-zinc-900">Deterministic</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Byte-identical Markdown for the same input, every run.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-zinc-900">Structure-preserving</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Real tables, fenced code with language, nested lists, blockquotes.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-zinc-900">Metadata &amp; links</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Title, author, date in YAML frontmatter; links resolved to absolute URLs.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Install ===== -->
+    <section id="install" class="scroll-mt-20 border-t border-zinc-200 py-14">
+      <h2 class="text-2xl font-semibold text-zinc-900">Install</h2>
+      <p class="mt-2 text-sm text-zinc-500">
+        Published as <span class="font-mono text-zinc-900">distill-md</span>; the installed command is still
+        <span class="font-mono text-zinc-900">distill</span>.
+      </p>
+
+      <div class="mt-6 space-y-5 text-sm">
+        <div>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">Agents · MCP server (no install)</p>
+          <div class="code-wrap group relative">
+            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+          </div>
+        </div>
+        <div>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">macOS / Linux</p>
+          <div class="code-wrap group relative">
+            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>curl -LsSf https://github.com/gokulnair2001/distill/releases/latest/download/distill-md-installer.sh | sh</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+          </div>
+        </div>
+        <div>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">Rust</p>
+          <div class="code-wrap group relative">
+            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>cargo install distill-md</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+          </div>
+        </div>
+      </div>
+      <p class="mt-5 text-sm text-zinc-500">
+        Prebuilt binaries for macOS, Linux, and Windows on every
+        <a href="https://github.com/gokulnair2001/distill/releases" class="text-zinc-900 underline underline-offset-4 hover:no-underline">GitHub Release</a>.
+      </p>
+    </section>
+
+    <!-- ===== Usage ===== -->
+    <section class="border-t border-zinc-200 py-14">
+      <h2 class="text-2xl font-semibold text-zinc-900">Usage</h2>
+      <div class="code-wrap group relative mt-6">
+        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm leading-relaxed text-zinc-800"><code data-copy><span class="text-zinc-400"># From a URL</span>
+distill https://en.wikipedia.org/wiki/Markdown
+
+<span class="text-zinc-400"># From a local file, or stdin</span>
+distill page.html
+curl -s https://example.com | distill -
+
+<span class="text-zinc-400"># Multiple inputs → one file each</span>
+distill https://a.com https://b.com -o out/</code></pre>
+        <button class="copy-btn absolute right-2 top-2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+      </div>
+    </section>
+
+    <!-- ===== MCP ===== -->
+    <section class="border-t border-zinc-200 py-14">
+      <h2 class="text-2xl font-semibold text-zinc-900">Use with an agent</h2>
+      <p class="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
+        Run distill as an
+        <a href="https://modelcontextprotocol.io" class="text-zinc-900 underline underline-offset-4 hover:no-underline">MCP</a>
+        server and any local agent (Claude Code, etc.) can call it as a tool —
+        <span class="font-mono text-zinc-900">distill_url</span>,
+        <span class="font-mono text-zinc-900">distill_urls</span>,
+        <span class="font-mono text-zinc-900">distill_html</span>. SSRF-guarded by default.
+      </p>
+      <div class="code-wrap group relative mt-6">
+        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800"><code data-copy>claude mcp add distill -- npx -y -p distill-md distill-mcp</code></pre>
+        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="border-t border-zinc-200">
+    <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-zinc-400 sm:flex-row">
+      <span>distill · GPL-3.0-or-later</span>
+      <div class="flex gap-6">
+        <a href="https://github.com/gokulnair2001/distill" class="hover:text-zinc-900 transition">GitHub</a>
+        <a href="https://github.com/gokulnair2001/distill/releases" class="hover:text-zinc-900 transition">Releases</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // --- copy buttons ---
+    document.querySelectorAll('[data-copy-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const code = btn.closest('.code-wrap').querySelector('[data-copy]');
+        navigator.clipboard.writeText(code.innerText.trim()).then(() => {
+          const prev = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => (btn.textContent = prev), 1200);
+        });
+      });
+    });
+
+    // --- try-it playground ---
+    const SAMPLE = `<article>
+  <h1>Release notes</h1>
+  <p>distill now resolves <a href="/docs">relative links</a> to absolute URLs.</p>
+  <h2>Highlights</h2>
+  <ul><li>Real tables</li><li>Fenced code blocks</li></ul>
+  <pre><code>distill https://example.com</code></pre>
+</article>`;
+
+    const htmlIn = document.getElementById('html-in');
+    const mdOut = document.getElementById('md-out');
+    const runBtn = document.getElementById('run-btn');
+    const sampleBtn = document.getElementById('sample-btn');
+    const status = document.getElementById('engine-status');
+
+    sampleBtn.addEventListener('click', () => { htmlIn.value = SAMPLE; });
+
+    let engine = null; // set to the wasm `distill_html` binding once loaded
+
+    async function loadEngine() {
+      if (engine) return engine;
+      status.textContent = 'loading engine…';
+      try {
+        const mod = await import('./pkg/distill_wasm.js');
+        await mod.default();                       // init wasm
+        engine = (html) => mod.distill_html(html); // string -> markdown
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'engine unavailable — run the WASM build (see README)';
+        throw e;
+      }
+      return engine;
+    }
+
+    runBtn.addEventListener('click', async () => {
+      const html = htmlIn.value.trim();
+      if (!html) { htmlIn.focus(); return; }
+      runBtn.disabled = true;
+      try {
+        const run = await loadEngine();
+        const md = run(html);
+        mdOut.innerHTML = '';
+        const code = document.createElement('code');
+        code.textContent = md;
+        mdOut.appendChild(code);
+      } catch (e) {
+        mdOut.innerHTML = '<code class="text-red-500">' + (e && e.message ? e.message : 'Failed to run') + '</code>';
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

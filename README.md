@@ -213,6 +213,22 @@ median is the stable figure.
       See "Use as an MCP server".
 - [ ] **Structured extraction** — schema-guided JSON output + RAG chunking.
 
+## Website & playground
+
+The project site lives in [`docs/`](docs/) and is served with GitHub Pages
+(Settings → Pages → *Deploy from a branch*, `main` / `/docs`). It includes a
+browser playground that runs the **real** `distill_html` core compiled to
+WebAssembly — no server, fully client-side (paste HTML → Markdown; the browser
+can't fetch arbitrary URLs itself). Rebuild the WASM bundle after changing the
+conversion pipeline:
+
+```bash
+# one-time: cargo install wasm-pack && rustup target add wasm32-unknown-unknown
+wasm-pack build --target web --out-dir docs/pkg --out-name distill_wasm \
+  -- --no-default-features --features wasm
+rm -f docs/pkg/{.gitignore,package.json,README.md,LICENSE,*.d.ts}
+```
+
 ## Development
 
 ```bash

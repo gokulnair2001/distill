@@ -5,22 +5,31 @@
 pub mod clean;
 pub mod convert;
 pub mod extract;
-pub mod fetch;
 pub mod metadata;
-pub mod render;
-pub mod ssrf;
 pub mod types;
+
+// Network + OS-bound pipeline. Excluded from the WebAssembly build, which only
+// runs the pure `distill_html` core (no fetch, no headless browser).
+#[cfg(feature = "net")]
+pub mod fetch;
+#[cfg(feature = "net")]
+pub mod render;
+#[cfg(feature = "net")]
+pub mod ssrf;
 
 #[cfg(feature = "mcp")]
 pub mod mcp;
 
-use anyhow::Result;
+// WebAssembly bindings for the browser playground.
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
 use kuchikiki::traits::*;
-use url::Url;
 
 pub use types::{Document, Options, RenderMode};
 
 /// Virtual-time budget (ms) handed to the headless browser when rendering.
+#[cfg(feature = "net")]
 const RENDER_BUDGET_MS: u32 = 8000;
 
 /// Convert raw HTML into a [`Document`]. Pure (no network) so it's easy to test.
@@ -46,7 +55,8 @@ pub fn distill_html(html: &str, opts: &Options) -> Document {
 /// Fetch a URL and convert it. The final (post-redirect) URL becomes the base
 /// for resolving relative links unless the caller already set one. Depending on
 /// [`Options::render`], the page may be rendered with a headless browser first.
-pub fn distill_url(url: &str, mut opts: Options) -> Result<Document> {
+#[cfg(feature = "net")]
+pub fn distill_url(url: &str, mut opts: Options) -> anyhow::Result<Document> {
     let fetched = fetch::fetch(url)?;
     let final_url = fetched.final_url.clone();
     if opts.base_url.is_none() {
@@ -58,6 +68,7 @@ pub fn distill_url(url: &str, mut opts: Options) -> Result<Document> {
 
 /// Decide whether to render with a headless browser, returning the HTML to use.
 /// Falls back to the static HTML if rendering is disabled or unavailable.
+#[cfg(feature = "net")]
 fn maybe_render(url: &str, static_html: String, opts: &Options) -> String {
     let debug = std::env::var("DISTILL_DEBUG").is_ok();
     let should = match opts.render {
@@ -89,6 +100,7 @@ fn maybe_render(url: &str, static_html: String, opts: &Options) -> String {
 }
 
 /// Heuristic: does this static HTML look like an under-rendered SPA shell?
+#[cfg(feature = "net")]
 fn needs_render(html: &str) -> bool {
     let dom = kuchikiki::parse_html().one(html);
     let body = match dom.select_first("body") {
@@ -116,6 +128,7 @@ fn needs_render(html: &str) -> bool {
 }
 
 /// Parse a `--base` override into a URL.
-pub fn parse_base(s: &str) -> Result<Url> {
-    Ok(Url::parse(s)?)
+#[cfg(feature = "net")]
+pub fn parse_base(s: &str) -> anyhow::Result<url::Url> {
+    Ok(url::Url::parse(s)?)
 }
