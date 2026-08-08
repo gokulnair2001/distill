@@ -143,8 +143,103 @@ class FirecrawlRunner(Runner):
             return RunResult(self.name, url, ok=False, error=str(e)[:300])
 
 
+class TrafilaturaRunner(Runner):
+    """Local, offline extraction library — no network beyond the initial fetch."""
+    name = "trafilatura"
+
+    def available(self) -> tuple[bool, str]:
+        try:
+            import trafilatura  # noqa: F401
+        except ImportError:
+            return False, "pip install trafilatura"
+        return True, ""
+
+    def run(self, url: str) -> RunResult:
+        import trafilatura
+        t = time.perf_counter()
+        try:
+            downloaded = trafilatura.fetch_url(url)
+            if not downloaded:
+                return RunResult(self.name, url, ms=(time.perf_counter() - t) * 1000,
+                                 ok=False, error="fetch_url returned nothing")
+            md = trafilatura.extract(
+                downloaded, output_format="markdown",
+                include_tables=True, include_links=True, include_images=True,
+                with_metadata=True,
+            ) or ""
+            ms = (time.perf_counter() - t) * 1000
+            return RunResult(self.name, url, markdown=md, ms=ms, ok=bool(md.strip()))
+        except Exception as e:  # noqa: BLE001
+            return RunResult(self.name, url, ok=False, error=str(e)[:300])
+
+
+class ReadabilityRunner(Runner):
+    """The classic Mozilla-Readability-style pipeline: readability-lxml for
+    content selection, html2text for HTML->Markdown conversion. What most
+    "reader mode" tools are built on under the hood."""
+    name = "readability"
+
+    def available(self) -> tuple[bool, str]:
+        try:
+            import readability  # noqa: F401
+            import html2text  # noqa: F401
+        except ImportError:
+            return False, "pip install readability-lxml html2text"
+        return True, ""
+
+    def run(self, url: str) -> RunResult:
+        import html2text
+        import readability
+        t = time.perf_counter()
+        try:
+            resp = requests.get(
+                url, timeout=30,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; distill-bench/1.0)"},
+            )
+            resp.raise_for_status()
+            doc = readability.Document(resp.text)
+            content_html = doc.summary()
+            h = html2text.HTML2Text()
+            h.body_width = 0
+            h.ignore_images = False
+            h.ignore_links = False
+            md = h.handle(content_html)
+            ms = (time.perf_counter() - t) * 1000
+            return RunResult(self.name, url, markdown=md, ms=ms, ok=bool(md.strip()))
+        except Exception as e:  # noqa: BLE001
+            return RunResult(self.name, url, ok=False, error=str(e)[:300])
+
+
+class MarkitdownRunner(Runner):
+    """Microsoft's markitdown — direct competitor: converts pages/docs to
+    agent-ready Markdown. No boilerplate stripping (whole-page conversion)."""
+    name = "markitdown"
+
+    def available(self) -> tuple[bool, str]:
+        try:
+            from markitdown import MarkItDown  # noqa: F401
+        except ImportError:
+            return False, "pip install markitdown"
+        return True, ""
+
+    def run(self, url: str) -> RunResult:
+        from markitdown import MarkItDown
+        t = time.perf_counter()
+        try:
+            md_converter = MarkItDown()
+            result = md_converter.convert(url)
+            md = result.text_content or ""
+            ms = (time.perf_counter() - t) * 1000
+            return RunResult(self.name, url, markdown=md, ms=ms, ok=bool(md.strip()))
+        except Exception as e:  # noqa: BLE001
+            return RunResult(self.name, url, ok=False, error=str(e)[:300])
+
+
 ALL_RUNNERS = {
     "distill": DistillRunner,
     "jina": JinaRunner,
     "firecrawl": FirecrawlRunner,
+    "trafilatura": TrafilaturaRunner,
+    "readability": ReadabilityRunner,
+    "markitdown": MarkitdownRunner,
 }
