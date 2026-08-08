@@ -196,4 +196,4 @@ cargo build --release
 
 ## License
 
-MIT
+[MIT](https://github.com/gokulnair2001/distill/blob/main/LICENSE)
