@@ -100,7 +100,8 @@ def structural_scores(md: str, expected: dict) -> dict:
         out[k] = round(r, 3)
         ratios.append(r)
     out["_mean"] = round(sum(ratios) / len(ratios), 3) if ratios else None
-    out["_raw"] = got
+    out["_raw"] = got          # what the tool emitted
+    out["_expected"] = expected  # upper-bound from source (same for all tools)
     return out
 
 

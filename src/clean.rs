@@ -59,9 +59,28 @@ fn drop_by_tag(root: &NodeRef) {
             .map(|s| s.into_iter().collect::<Vec<_>>())
             .unwrap_or_default();
         for m in matches {
+            // `<header>` is page chrome at the top level, but inside <article>/
+            // <main> it usually holds the real title/byline — keep those.
+            if *tag == "header" && ancestor_is(m.as_node(), &["article", "main"]) {
+                continue;
+            }
             m.as_node().detach();
         }
     }
+}
+
+/// Does `node` have an ancestor element whose tag is in `names`?
+fn ancestor_is(node: &NodeRef, names: &[&str]) -> bool {
+    let mut cur = node.parent();
+    while let Some(n) = cur {
+        if let Some(el) = n.as_element() {
+            if names.contains(&el.name.local.as_ref()) {
+                return true;
+            }
+        }
+        cur = n.parent();
+    }
+    false
 }
 
 fn drop_by_identifier(root: &NodeRef) {

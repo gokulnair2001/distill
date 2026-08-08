@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><title>Tier 2 fixture</title></head>
+<body>
+  <article>
+    <header><h1>Real In-Article Title</h1><p class="byline">By Someone</p></header>
+
+    <p>Intro paragraph with enough words to anchor the main-content scorer so this article wins extraction cleanly.</p>
+
+    <h2>Definitions</h2>
+    <dl>
+      <dt>GET</dt>
+      <dd>Requests a representation of the resource.</dd>
+      <dt>POST</dt>
+      <dd>Submits an entity to the resource.</dd>
+    </dl>
+
+    <h2>Config table (spans)</h2>
+    <table>
+      <tr><th>Env</th><th>Region</th><th>Value</th></tr>
+      <tr><td rowspan="2">prod</td><td>us</td><td>10</td></tr>
+      <tr><td>eu</td><td>20</td></tr>
+      <tr><td colspan="2">all regions</td><td>30</td></tr>
+    </table>
+
+    <h2>Code</h2>
+    <p>Use <code>arr.map(`${x}`)</code> in a template literal.</p>
+
+    <h2>Image</h2>
+    <img srcset="/img/small.png 480w, /img/large.png 1024w" src="data:image/gif;base64,PLACEHOLDER" alt="Responsive diagram">
+  </article>
+</body>
+</html>

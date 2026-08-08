@@ -102,6 +102,56 @@ fn captures_content_split_across_siblings() {
 }
 
 #[test]
+fn definition_list_renders() {
+    let html = r#"<body><article><p>Intro long enough to anchor the extractor for this small doc page here.</p>
+      <dl><dt>GET</dt><dd>Requests a resource.</dd></dl></article></body>"#;
+    let out = md(html);
+    assert!(out.contains("**GET**"), "got: {out}");
+    assert!(out.contains(": Requests a resource."), "got: {out}");
+}
+
+#[test]
+fn table_colspan_rowspan_aligns() {
+    let html = r#"<body><article>
+      <p>Intro long enough to anchor the extractor so the table survives extraction here now.</p>
+      <table>
+        <tr><th>Env</th><th>Region</th><th>Value</th></tr>
+        <tr><td rowspan="2">prod</td><td>us</td><td>10</td></tr>
+        <tr><td>eu</td><td>20</td></tr>
+        <tr><td colspan="2">all</td><td>30</td></tr>
+      </table></article></body>"#;
+    let out = md(html);
+    // rowspan continuation keeps eu/20 in their columns.
+    assert!(out.contains("|  | eu | 20 |"), "rowspan misaligned: {out}");
+    // colspan leaves an empty second column, 30 stays in column 3.
+    assert!(out.contains("| all |  | 30 |"), "colspan misaligned: {out}");
+}
+
+#[test]
+fn inline_code_escapes_backticks() {
+    let html = r#"<body><article><p>Use <code>a`b</code> here in this sufficiently long paragraph of text content.</p></article></body>"#;
+    let out = md(html);
+    assert!(out.contains("``a`b``"), "backtick not escaped: {out}");
+}
+
+#[test]
+fn in_article_header_is_kept() {
+    let html = r#"<body><article><header><h1>Kept Title</h1></header>
+      <p>Body paragraph with enough words to anchor extraction for this article content here now.</p></article></body>"#;
+    let out = md(html);
+    assert!(out.contains("# Kept Title"), "in-article header dropped: {out}");
+}
+
+#[test]
+fn image_prefers_srcset_over_data_placeholder() {
+    let html = r#"<body><article><p>Paragraph long enough to anchor the extractor so the image survives here now.</p>
+      <img srcset="/img/small.png 480w, /img/large.png 1024w" src="data:image/gif;base64,AAAA" alt="Diagram"></article></body>"#;
+    let out = md(html);
+    assert!(out.contains("![Diagram](https://ex.com/img/small.png)"), "got: {out}");
+    assert!(!out.contains("data:image"), "data placeholder leaked: {out}");
+}
+
+#[test]
 fn render_mode_parses() {
     use distill::RenderMode;
     assert_eq!(RenderMode::parse("never"), Some(RenderMode::Never));

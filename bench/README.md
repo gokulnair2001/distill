@@ -57,6 +57,15 @@ deliberately weighted toward incumbent failure modes: `article`, `docs`,
 - **Same-input fairness**: determinism runs distill twice on identical cached
   HTML so page volatility doesn't look like nondeterminism. Cloud tools fetch
   live, so their speed includes network + render (that's the real product cost).
+- **Two speed numbers.** `e2e_ms` is end-to-end (fetch + process), single trial,
+  and dominated by network variance — treat it as indicative only. `proc_ms` is
+  distill's process-only time on cached HTML, median of `--trials` (default 5) —
+  the stable, network-free speed. Cloud tools can't separate the two, so their
+  `proc_ms` is `-`.
+- **Structural = MICRO-average** `Σkept/Σsource` with `[Σkept/Σsource n=pages]`
+  shown, so tiny samples (code/tables often n≤3) aren't mistaken for solid
+  averages. A ratio >1.0 (e.g. Jina links/images) means the tool emitted more
+  than the content-scoped source had — i.e. boilerplate inflation, not fidelity.
 
 ## Known findings (initial distill vs Jina run, 9 URLs)
 

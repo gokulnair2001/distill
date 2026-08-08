@@ -47,6 +47,8 @@ def main() -> None:
     ap.add_argument("--corpus", default=str(BENCH_DIR / "corpus.jsonl"))
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--qa-n", type=int, default=5)
+    ap.add_argument("--trials", type=int, default=5,
+                    help="trials for distill's process-only timing (median)")
     args = ap.parse_args()
 
     layers = ALL_LAYERS if args.layers == "all" else args.layers.split(",")
@@ -76,11 +78,16 @@ def main() -> None:
 
     per_tool: dict[str, list[dict]] = {r.name: [] for r in runners}
 
+    distill_runner = next((r for r in runners if r.name == "distill"), None)
+
     for row in corpus:
         cid, bucket, url = row["id"], row["bucket"], row["url"]
         print(f"\n=== [{bucket}] {cid} — {url}")
-        html = metrics.fetch_html(url) if "structural" in layers else ""
-        expected = metrics.expected_features(html) if html else None
+        # Fetch source HTML once (cached) if needed for structural scoring or
+        # distill's process-only timing.
+        need_html = ("structural" in layers) or (distill_runner is not None)
+        html = metrics.fetch_html(url) if need_html else ""
+        expected = metrics.expected_features(html) if ("structural" in layers and html) else None
         gold = gold_for(cid)
 
         outputs: dict[str, str] = {}
@@ -108,15 +115,24 @@ def main() -> None:
             extra = f" {row_metrics.get('tokens','')}tok" if res.ok else ""
             print(f"   {r.name:10} {res.ms:7.0f}ms  {status}{extra}")
 
-        # Determinism (distill only): compare two runs on the SAME cached HTML,
-        # so page volatility between live fetches doesn't masquerade as nondeterminism.
-        if "basics" in layers and outputs.get("distill"):
-            dhtml = html or metrics.fetch_html(url)
-            distill_runner = next(r for r in runners if r.name == "distill")
-            if dhtml and hasattr(distill_runner, "run_stdin"):
-                a = distill_runner.run_stdin(dhtml)
-                b = distill_runner.run_stdin(dhtml)
-                per_tool["distill"][-1]["deterministic"] = bool(a) and (a == b)
+        # Process-only timing for distill: run on the SAME cached HTML (no
+        # network), median of N trials. This is the stable, defensible speed
+        # number — the end-to-end `ms` above is dominated by network variance.
+        if distill_runner and html and hasattr(distill_runner, "run_stdin"):
+            import time as _time
+            trials = []
+            first = None
+            for _ in range(max(1, args.trials)):
+                t = _time.perf_counter()
+                md_out = distill_runner.run_stdin(html)
+                trials.append((_time.perf_counter() - t) * 1000)
+                if first is None:
+                    first = md_out
+            per_tool["distill"][-1]["proc_ms"] = round(statistics.median(trials), 1)
+            # Determinism: identical output across trials on identical input.
+            second = distill_runner.run_stdin(html)
+            per_tool["distill"][-1]["deterministic"] = bool(first) and (first == second)
+            print(f"   distill    proc-only median: {per_tool['distill'][-1]['proc_ms']}ms")
 
         # QA layer (needs key + a reference).
         if "qa" in layers and qa_ok and outputs:
@@ -146,7 +162,7 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
     print("SCORECARD (averaged over corpus)")
     print("=" * 70)
 
-    cols = ["tool", "n", "cover%", "avg_ms"]
+    cols = ["tool", "n", "cover%", "e2e_ms", "proc_ms"]
     if "efficiency" in layers:
         cols.append("avg_tok")
     if "structural" in layers:
@@ -165,7 +181,14 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
             continue
         n = len(rows)
         cover = sum(1 for r in rows if r.get("coverage")) / n * 100
-        cells = [tool, str(n), f"{cover:.0f}", f"{_avg([r['ms'] for r in rows]):.0f}"]
+        proc = _avg([r.get("proc_ms") for r in rows])
+        cells = [
+            tool,
+            str(n),
+            f"{cover:.0f}",
+            f"{_avg([r['ms'] for r in rows]):.0f}",
+            f"{proc:.0f}" if proc is not None else "-",
+        ]
         if "efficiency" in layers:
             cells.append(str(_avg([r.get("tokens") for r in rows]) or "-"))
         if "structural" in layers:
@@ -181,8 +204,9 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
         print("| " + " | ".join(cells) + " |")
 
     if "structural" in layers:
-        print("\nStructural preservation by feature (ratio vs source; "
-              "NOTE: links/headings include boilerplate, so higher isn't always better):")
+        print("\nStructural preservation by feature — MICRO-average Σkept/Σsource")
+        print("(cells show ratio [Σkept/Σsource over N pages]; links/headings "
+              "include boilerplate so higher isn't always better):")
         feats = ["tables", "code_blocks", "links", "headings", "images"]
         print("| tool | " + " | ".join(feats) + " |")
         print("|" + "|".join("---" for _ in range(len(feats) + 1)) + "|")
@@ -191,8 +215,19 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
                 continue
             cells = [tool]
             for f in feats:
-                vals = [r.get("structural", {}).get(f) for r in rows]
-                cells.append(str(_avg(vals) if any(v is not None for v in vals) else "-"))
+                got = exp = pages = 0
+                for r in rows:
+                    s = r.get("structural") or {}
+                    e = (s.get("_expected") or {}).get(f, 0)
+                    g = (s.get("_raw") or {}).get(f, 0)
+                    if e > 0:
+                        got += g
+                        exp += e
+                        pages += 1
+                if exp > 0:
+                    cells.append(f"{got/exp:.2f} [{got}/{exp} n={pages}]")
+                else:
+                    cells.append("-")
             print("| " + " | ".join(cells) + " |")
 
 

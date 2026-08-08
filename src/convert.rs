@@ -76,6 +76,7 @@ fn block_element(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
         }
         "ul" => render_list(node, ctx, false, depth),
         "ol" => render_list(node, ctx, true, depth),
+        "dl" => render_dl(node, ctx),
         "pre" => render_pre(node),
         "blockquote" => render_blockquote(node, ctx, depth),
         "table" => render_table(node, ctx),
@@ -114,13 +115,10 @@ fn inline(node: &NodeRef, ctx: &Ctx) -> String {
             if !ctx.opts.include_images {
                 return String::new();
             }
-            let src = attr(node, "src")
-                .or_else(|| attr(node, "data-src"))
-                .map(|s| resolve(&s, ctx))
-                .unwrap_or_default();
-            if src.is_empty() {
-                return String::new();
-            }
+            let src = match resolve_img_src(node, ctx) {
+                Some(s) => s,
+                None => return String::new(),
+            };
             let alt = attr(node, "alt").unwrap_or_default();
             format!("![{}]({})", collapse_ws(&alt).trim(), src)
         }
@@ -131,7 +129,7 @@ fn inline(node: &NodeRef, ctx: &Ctx) -> String {
             if text.is_empty() {
                 String::new()
             } else {
-                format!("`{}`", text)
+                fence_inline_code(&text)
             }
         }
         "s" | "del" => wrap(node, ctx, "~~"),
@@ -191,6 +189,34 @@ fn render_list(node: &NodeRef, ctx: &Ctx, ordered: bool, depth: usize) -> String
     out
 }
 
+/// Definition list: term in bold, each definition on a `: ` line (pandoc style).
+fn render_dl(node: &NodeRef, ctx: &Ctx) -> String {
+    let mut out = String::new();
+    for child in node.children() {
+        match element_name(&child).as_deref() {
+            Some("dt") => {
+                let term = inline_children(&child, ctx);
+                let term = term.trim();
+                if !term.is_empty() {
+                    out.push_str(&format!("**{term}**\n"));
+                }
+            }
+            Some("dd") => {
+                let def = inline_children(&child, ctx);
+                let def = def.trim();
+                if !def.is_empty() {
+                    out.push_str(&format!(": {def}\n"));
+                }
+            }
+            _ => {}
+        }
+    }
+    if !out.is_empty() {
+        out.push('\n');
+    }
+    out
+}
+
 fn render_pre(node: &NodeRef) -> String {
     // Language hint from a child <code class="language-xxx">.
     let mut lang = String::new();
@@ -224,48 +250,106 @@ fn render_blockquote(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
     out
 }
 
+/// A source table cell before grid placement.
+struct SrcCell {
+    text: String,
+    colspan: usize,
+    rowspan: usize,
+    is_th: bool,
+}
+
 fn render_table(node: &NodeRef, ctx: &Ctx) -> String {
-    let mut rows: Vec<Vec<String>> = Vec::new();
+    // 1. Collect source rows (cells with their spans).
+    let mut src_rows: Vec<Vec<SrcCell>> = Vec::new();
     for tr in node.select("tr").map(|s| s.collect::<Vec<_>>()).unwrap_or_default() {
         let mut cells = Vec::new();
         for cell in tr.as_node().children() {
-            match element_name(&cell).as_deref() {
-                Some("td") | Some("th") => {
-                    let text = inline_children(&cell, ctx);
-                    let text = text.trim().replace('|', "\\|").replace('\n', " ");
-                    cells.push(text);
-                }
-                _ => {}
-            }
+            let name = element_name(&cell);
+            let is_th = match name.as_deref() {
+                Some("th") => true,
+                Some("td") => false,
+                _ => continue,
+            };
+            let text = inline_children(&cell, ctx)
+                .trim()
+                .replace('|', "\\|")
+                .replace('\n', " ");
+            cells.push(SrcCell {
+                text,
+                colspan: span_attr(&cell, "colspan"),
+                rowspan: span_attr(&cell, "rowspan"),
+                is_th,
+            });
         }
         if !cells.is_empty() {
-            rows.push(cells);
+            src_rows.push(cells);
         }
     }
-    if rows.is_empty() {
+    if src_rows.is_empty() {
         return String::new();
     }
-    let cols = rows.iter().map(|r| r.len()).max().unwrap_or(0);
-    let mut out = String::new();
 
-    let header = &rows[0];
-    out.push_str(&render_row(header, cols));
-    out.push_str(&format!("|{}\n", " --- |".repeat(cols)));
-    for row in &rows[1..] {
-        out.push_str(&render_row(row, cols));
+    // 2. Lay cells onto a grid, honouring colspan (fills right) and rowspan
+    //    (fills down; continuation cells are empty). Prevents column drift.
+    use std::collections::HashMap;
+    let mut grid: HashMap<(usize, usize), String> = HashMap::new();
+    let mut occupied: std::collections::HashSet<(usize, usize)> = Default::default();
+    let mut max_col = 0usize;
+    let mut max_row = 0usize;
+    let mut header_th_row0 = true; // is every cell placed on row 0 a <th>?
+
+    for (r, cells) in src_rows.iter().enumerate() {
+        let mut c = 0usize;
+        for cell in cells {
+            while occupied.contains(&(r, c)) {
+                c += 1;
+            }
+            for dr in 0..cell.rowspan {
+                for dc in 0..cell.colspan {
+                    occupied.insert((r + dr, c + dc));
+                    max_row = max_row.max(r + dr);
+                }
+            }
+            grid.insert((r, c), cell.text.clone());
+            if r == 0 && !cell.is_th {
+                header_th_row0 = false;
+            }
+            max_col = max_col.max(c + cell.colspan);
+            c += cell.colspan;
+        }
+    }
+    let cols = max_col;
+    let nrows = max_row + 1;
+    let _ = header_th_row0; // header is always grid row 0 (promoted if no <th>)
+
+    // 3. Emit GFM table: row 0 is the header, then the separator, then the rest.
+    let mut out = String::new();
+    out.push_str(&emit_row(&grid, 0, cols));
+    out.push_str(&format!("|{}\n", " --- |".repeat(cols.max(1))));
+    for r in 1..nrows {
+        out.push_str(&emit_row(&grid, r, cols));
     }
     out.push('\n');
     out
 }
 
-fn render_row(cells: &[String], cols: usize) -> String {
+fn emit_row(grid: &std::collections::HashMap<(usize, usize), String>, r: usize, cols: usize) -> String {
     let mut s = String::from("|");
-    for i in 0..cols {
-        let c = cells.get(i).map(|s| s.as_str()).unwrap_or("");
-        s.push_str(&format!(" {c} |"));
+    for c in 0..cols.max(1) {
+        let cell = grid.get(&(r, c)).map(|s| s.as_str()).unwrap_or("");
+        s.push_str(&format!(" {cell} |"));
     }
     s.push('\n');
     s
+}
+
+/// Parse a `colspan`/`rowspan` attribute, defaulting to 1 and clamping to a
+/// sane max so a hostile `colspan="100000"` can't blow up memory.
+fn span_attr(node: &NodeRef, name: &str) -> usize {
+    attr(node, name)
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(1)
+        .clamp(1, 100)
 }
 
 // ---- small helpers ----
@@ -297,6 +381,52 @@ fn resolve(href: &str, ctx: &Ctx) -> String {
         }
     }
     href.to_string()
+}
+
+/// Wrap inline code so embedded backticks don't break the fence (CommonMark:
+/// use one more backtick than the longest internal run; pad if it touches one).
+fn fence_inline_code(text: &str) -> String {
+    let mut longest = 0usize;
+    let mut cur = 0usize;
+    for ch in text.chars() {
+        if ch == '`' {
+            cur += 1;
+            longest = longest.max(cur);
+        } else {
+            cur = 0;
+        }
+    }
+    let ticks = "`".repeat(longest + 1);
+    if text.starts_with('`') || text.ends_with('`') {
+        format!("{ticks} {text} {ticks}")
+    } else {
+        format!("{ticks}{text}{ticks}")
+    }
+}
+
+/// Resolve an image URL from the many places sites stash it: lazy-load
+/// attributes, then `src`, then the first `srcset` candidate. Skips `data:`
+/// placeholders (usually 1px spacers or inline blobs that bloat output).
+fn resolve_img_src(node: &NodeRef, ctx: &Ctx) -> Option<String> {
+    for a in ["data-src", "data-original", "data-lazy-src", "src"] {
+        if let Some(v) = attr(node, a) {
+            let v = v.trim();
+            if !v.is_empty() && !v.starts_with("data:") {
+                return Some(resolve(v, ctx));
+            }
+        }
+    }
+    for a in ["srcset", "data-srcset"] {
+        if let Some(v) = attr(node, a) {
+            if let Some(first) = v.split(',').next() {
+                let url = first.trim().split_whitespace().next().unwrap_or("");
+                if !url.is_empty() && !url.starts_with("data:") {
+                    return Some(resolve(url, ctx));
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Collapse any run of whitespace (incl. newlines) to a single space.
