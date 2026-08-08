@@ -1,12 +1,23 @@
+# `distill` is taken on crates.io/npm, so we publish as `distill-md`. The
+# library crate and the CLI command stay `distill` (see [lib] and [[bin]]),
+# so `use distill::…` and the `distill` command are unchanged.
 [package]
-name = "distill"
+name = "distill-md"
 version = "0.1.0"
 edition = "2021"
 description = "Convert any website into clean, agent-ready Markdown. Local-first, fast, deterministic."
 license = "MIT"
+repository = "https://github.com/gokulnair2001/distill"
+homepage = "https://github.com/gokulnair2001/distill"
+readme = "README.md"
+keywords = ["markdown", "html", "scraping", "mcp", "agent"]
+categories = ["command-line-utilities", "text-processing"]
 
-# NOTE: the crate name `distill` is taken on crates.io (an asset pipeline).
-# This is fine for local builds; pick a publish name later (e.g. `distill-md`).
+# Keep the library crate named `distill` regardless of the package name.
+[lib]
+name = "distill"
+path = "src/lib.rs"
+
 [[bin]]
 name = "distill"
 path = "src/main.rs"
@@ -43,3 +54,8 @@ serde = { version = "1", features = ["derive"], optional = true }
 lto = true
 codegen-units = 1
 strip = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
