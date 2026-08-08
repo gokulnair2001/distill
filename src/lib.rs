@@ -8,7 +8,11 @@ pub mod extract;
 pub mod fetch;
 pub mod metadata;
 pub mod render;
+pub mod ssrf;
 pub mod types;
+
+#[cfg(feature = "mcp")]
+pub mod mcp;
 
 use anyhow::Result;
 use kuchikiki::traits::*;

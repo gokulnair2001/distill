@@ -42,6 +42,11 @@ distill page.html
 # From stdin
 curl -s https://example.com | distill -
 
+# Multiple inputs → one file per input (‑o is treated as a directory).
+# A failing input is reported and skipped; the batch still writes the rest.
+distill https://a.com https://b.com page.html -o out/
+#   → out/a.com.md, out/b.com.md, out/page.md
+
 # Options
 distill <url> \
   --render auto \      # JS rendering: never | auto | always (default: auto)
@@ -50,7 +55,7 @@ distill <url> \
   --no-images \        # drop images
   --raw \              # skip main-content extraction (convert whole page)
   --base <url> \       # base for resolving relative links
-  -o out.md            # write to a file
+  -o out.md            # write to a file (or a directory, for multiple inputs)
 ```
 
 ### JavaScript rendering
@@ -67,6 +72,61 @@ at a specific binary. If none is found, distill falls back to the static HTML.
 > Note: statically pre-rendered sites (Next.js/VitePress SSG, most docs sites)
 > already contain their content, so rendering them changes nothing — it only
 > helps genuinely client-rendered pages.
+
+## Use as an MCP server
+
+`distill` ships an [MCP](https://modelcontextprotocol.io) server so any local
+agent (Claude Code, etc.) can call it as a tool instead of shelling out. It
+speaks the protocol over stdio and exposes two tools:
+
+- **`distill_url`** — fetch a URL and convert it. SSRF-guarded (see below).
+- **`distill_urls`** — fetch and convert up to 20 URLs in one call (fetched 4 at
+  a time). Returns one result block per URL, in input order, each prefixed with
+  `<!-- distill url="..." status="ok|error" -->`; a failing URL yields an error
+  block instead of failing the whole batch.
+- **`distill_html`** — convert HTML you already have. No network.
+
+All accept the same knobs as the CLI (`include_links`, `include_images`,
+`frontmatter`, `raw`, `base`; `distill_url`/`distill_urls` also take `render`).
+
+Build the server binary (it's behind a feature flag so the plain CLI stays lean):
+
+```bash
+cargo build --release --features mcp
+# binary at ./target/release/distill-mcp
+```
+
+Register it with Claude Code:
+
+```bash
+claude mcp add distill -- /absolute/path/to/target/release/distill-mcp
+```
+
+Or add it to an `mcp.json` yourself:
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "/absolute/path/to/target/release/distill-mcp"
+    }
+  }
+}
+```
+
+### SSRF guard
+
+Because `distill_url` will fetch whatever URL an agent hands it, requests to
+non-public addresses — loopback, private ranges, link-local (including the
+`169.254.169.254` cloud-metadata endpoint), and their IPv6 equivalents — are
+**refused by default**, on the initial URL and on every redirect/`meta refresh`
+hop. To distill a local dev server or an internal host, opt out explicitly:
+
+```bash
+DISTILL_ALLOW_PRIVATE_HOSTS=1 distill http://localhost:3000
+```
+
+The same variable governs the CLI and the MCP server.
 
 ## How it works
 
@@ -96,13 +156,15 @@ no network round-trip.
 - [ ] **Page-type awareness** — distinct strategies for docs / listings / tables.
 - [ ] **Structural fidelity** — definition lists, table colspan/rowspan, inline
       code backtick escaping, `<picture>`/`srcset`.
-- [ ] **MCP server** — expose `distill` as a tool any local agent can call.
+- [x] **MCP server** — expose `distill` as a tool any local agent can call
+      (`distill_url` + `distill_html`, SSRF-guarded). See "Use as an MCP server".
 - [ ] **Structured extraction** — schema-guided JSON output + RAG chunking.
 
 ## Development
 
 ```bash
-cargo test          # unit + integration tests
+cargo test                     # unit + integration tests
+cargo test --features mcp      # include the MCP server
 cargo build --release
 ```
 

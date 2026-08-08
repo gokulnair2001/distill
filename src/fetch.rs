@@ -4,6 +4,8 @@ use regex::Regex;
 use std::time::Duration;
 use url::Url;
 
+use crate::ssrf;
+
 /// A fetched page: the HTML body and the *final* URL after redirects
 /// (used as the base for resolving relative links).
 pub struct Fetched {
@@ -33,14 +35,26 @@ static URL_IN_CONTENT: Lazy<Regex> =
 /// Fetch a URL, following HTTP redirects *and* client-side `<meta refresh>`
 /// redirects (up to a small hop limit). Returns the final HTML and URL.
 pub fn fetch(url: &str) -> Result<Fetched> {
+    // SSRF guard runs on every hop, including HTTP redirects (which reqwest
+    // follows internally) — a public URL can redirect to a private one.
     let client = reqwest::blocking::Client::builder()
         .user_agent(UA)
         .timeout(Duration::from_secs(30))
-        .redirect(reqwest::redirect::Policy::limited(10))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 10 {
+                return attempt.error("too many redirects");
+            }
+            match ssrf::check_url(attempt.url()) {
+                Ok(()) => attempt.follow(),
+                Err(e) => attempt
+                    .error(Box::<dyn std::error::Error + Send + Sync>::from(e.to_string())),
+            }
+        }))
         .build()
         .context("building HTTP client")?;
 
     let mut current = Url::parse(url).with_context(|| format!("invalid URL: {url}"))?;
+    ssrf::check_url(&current)?;
     let mut visited: Vec<String> = Vec::new();
 
     for _ in 0..4 {
@@ -72,6 +86,7 @@ pub fn fetch(url: &str) -> Result<Fetched> {
         if let Some(target) = meta_refresh_target(&html, &final_url) {
             let t = target.to_string();
             if !visited.contains(&t) {
+                ssrf::check_url(&target)?;
                 current = target;
                 continue;
             }
