@@ -7,21 +7,24 @@ actually use: boilerplate stripped, structure preserved (tables, code blocks,
 nested lists), links resolved to absolute URLs, and metadata in YAML frontmatter.
 No cloud, no per-page cost, byte-identical output for the same input.
 
+Use it as a **CLI** or run it as an **MCP server** so agents can call it as a
+tool (`distill_url`, `distill_urls`, `distill_html`).
+
 ## Why
 
-Most extractors are tuned for *articles* and fall apart on the pages agents
-actually hit — docs, tables, product/pricing pages, SPAs. `distill` treats
-structural fidelity and non-article content as first-class, and runs entirely on
-your machine.
+Agents mostly need to read docs, tables, and product/pricing pages — not just
+clean articles. `distill` is built for that: structural fidelity and non-article
+content are first-class, and it runs entirely on your machine.
 
-| | distill | Jina Reader | Firecrawl | trafilatura |
-|---|---|---|---|---|
-| Local / no cost | ✅ | ❌ cloud | ❌ cloud/paid | ✅ |
-| Deterministic output | ✅ | ⚠️ | ⚠️ | ✅ |
-| Tables → real MD tables | ✅ | ⚠️ | ⚠️ | ❌ |
-| Code blocks + language | ✅ | ⚠️ | ✅ | ❌ |
-| Absolute link resolution | ✅ | ⚠️ | ✅ | ⚠️ |
-| JS / SPA rendering | 🚧 planned | ✅ | ✅ | ❌ |
+**What you get**
+
+- **Local & private** — no cloud, no per-page cost, nothing leaves your machine.
+- **Deterministic** — byte-identical Markdown for the same input.
+- **Structure-preserving** — real Markdown tables, fenced code with language,
+  nested lists, and blockquotes.
+- **Absolute links** — relative URLs and images resolved against the page.
+- **Metadata** — title / author / date / canonical in YAML frontmatter.
+- **JS / SPA aware** — optional headless-Chrome fallback for client-rendered pages.
 
 ## Install
 
@@ -79,7 +82,7 @@ distill <url> \
 
 Client-rendered pages (SPAs whose content is injected by JS) return an empty
 shell over plain HTTP. `distill` handles this **static-first**: it fetches
-statically (~10 ms) and, in `--render auto`, only spins up a headless browser
+statically and, in `--render auto`, only spins up a headless browser
 when the page looks under-rendered (empty `#root`/`#app`, near-empty body).
 `--render always` forces it; `--render never` disables it.
 
@@ -94,7 +97,7 @@ at a specific binary. If none is found, distill falls back to the static HTML.
 
 `distill` ships an [MCP](https://modelcontextprotocol.io) server so any local
 agent (Claude Code, etc.) can call it as a tool instead of shelling out. It
-speaks the protocol over stdio and exposes two tools:
+speaks the protocol over stdio and exposes three tools:
 
 - **`distill_url`** — fetch a URL and convert it. SSRF-guarded (see below).
 - **`distill_urls`** — fetch and convert up to 20 URLs in one call (fetched 4 at
@@ -169,10 +172,33 @@ URL → fetch → metadata → clean → extract → convert → Markdown
 5. **convert** — DOM→Markdown with real tables, fenced code + language, resolved
    absolute links, nested lists, blockquotes.
 
-## Performance
+## Benchmarks
 
-~10 ms to parse + clean + extract + convert a 300 KB page (Wikipedia), local,
-no network round-trip.
+Numbers below are **distill only** (no competitor comparison) on a small 9-URL
+corpus (`bench/corpus.jsonl`), measured on 2026-08-08 against the current build.
+They're meant to show where distill actually is today — including where it's
+weak. Reproduce with the harness in [bench/](bench/README.md).
+
+| metric | value |
+|---|---|
+| pages | 9 |
+| coverage | 100% returned non-empty output *(a weak signal — a fragment can still "pass")* |
+| process time (median, network-free) | ~12 ms/page |
+| output size | ~7.7k tokens/page (avg) |
+| deterministic | yes — byte-identical on re-run |
+
+**Structural preservation** — micro-average `Σkept / Σsource` (higher isn't
+always better; `links`/`headings` include page boilerplate):
+
+| tables | code blocks | links | headings | images |
+|---|---|---|---|---|
+| 0.36 (8/22) | 0.41 (11/27) | 0.63 | 0.56 | 0.87 |
+
+Honest read: distill is **fast, deterministic, and token-lean**, but **table and
+code-block preservation is still partial** (small samples — tables n=5, code
+n=3), which is why *Structural fidelity* is an active roadmap item. End-to-end
+timing (~585 ms avg) is network-dominated and only indicative; the process-only
+median is the stable figure.
 
 ## Roadmap
 
@@ -183,7 +209,8 @@ no network round-trip.
 - [ ] **Structural fidelity** — definition lists, table colspan/rowspan, inline
       code backtick escaping, `<picture>`/`srcset`.
 - [x] **MCP server** — expose `distill` as a tool any local agent can call
-      (`distill_url` + `distill_html`, SSRF-guarded). See "Use as an MCP server".
+      (`distill_url` / `distill_urls` / `distill_html`, SSRF-guarded).
+      See "Use as an MCP server".
 - [ ] **Structured extraction** — schema-guided JSON output + RAG chunking.
 
 ## Development
