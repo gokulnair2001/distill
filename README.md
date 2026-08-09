@@ -1,41 +1,54 @@
 # distill
 
-Convert any website into clean, **agent-ready Markdown**. Local-first, fast, deterministic.
+**Turn any webpage into clean Markdown an AI agent can actually use.**
 
-`distill` is a CLI that turns a URL (or raw HTML) into Markdown an LLM agent can
-actually use: boilerplate stripped, structure preserved (tables, code blocks,
-nested lists), links resolved to absolute URLs, and metadata in YAML frontmatter.
-No cloud, no per-page cost, byte-identical output for the same input.
+`distill` is a local CLI (and MCP server) that takes a URL or HTML file and
+returns Markdown with:
 
-Use it as a **CLI** or run it as an **MCP server** so agents can call it as a
-tool (`distill_url`, `distill_urls`, `distill_html`).
+- nav / ads / footers stripped
+- tables, code blocks, and lists kept intact
+- relative links resolved to absolute URLs
+- title / author / date in a YAML frontmatter block
 
-## Why
+No cloud API. No per-page cost. Same input → same Markdown every time.
 
-Agents mostly need to read docs, tables, and product/pricing pages — not just
-clean articles. `distill` is built for that: structural fidelity and non-article
-content are first-class, and it runs entirely on your machine.
+```bash
+distill https://en.wikipedia.org/wiki/Markdown
+# → clean Markdown on stdout
+```
 
-**What you get**
+---
 
-- **Local & private** — no cloud, no per-page cost, nothing leaves your machine.
-- **Deterministic** — byte-identical Markdown for the same input.
-- **Structure-preserving** — real Markdown tables, fenced code with language,
-  nested lists, and blockquotes.
-- **Absolute links** — relative URLs and images resolved against the page.
-- **Metadata** — title / author / date / canonical in YAML frontmatter.
-- **JS / SPA aware** — optional headless-Chrome fallback for client-rendered pages.
+## What it is (in one minute)
+
+| | |
+|---|---|
+| **Input** | A URL, an HTML file, or HTML on stdin |
+| **Output** | Clean Markdown (+ optional YAML metadata) |
+| **Where it runs** | On your machine — nothing is sent to a cloud service |
+| **Who it's for** | Agents and developers who need docs, tables, and product pages — not just news articles |
+
+Most “reader mode” tools were built for blog posts. Agents usually need API
+docs, pricing tables, forum threads, and reference pages. Distill is built for
+that: **structural fidelity first**, then speed and privacy.
+
+**Ways to use it**
+
+- **CLI** — `distill <url>` in a shell or script
+- **MCP server** — tools `distill_url`, `distill_urls`, `distill_html` for local agents (Claude Code, etc.)
+
+> Published as **`distill-md`** on crates.io / npm (the name `distill` is taken).
+> The installed commands are still `distill` and `distill-mcp`.
+
+---
 
 ## Install
 
-Published as **`distill-md`** (the `distill` name is taken on crates.io/npm);
-the installed command is still `distill`.
-
 ```bash
-# Agents (MCP server) — no install, always latest
+# Agents (MCP) — no install, always latest
 npx -y -p distill-md distill-mcp
 
-# Shell installer (macOS / Linux) — prebuilt, no toolchain
+# Shell installer (macOS / Linux) — prebuilt binary
 curl -LsSf https://github.com/gokulnair2001/distill/releases/latest/download/distill-md-installer.sh | sh
 
 # Rust toolchain
@@ -43,34 +56,37 @@ cargo binstall distill-md      # prebuilt
 cargo install distill-md       # from source
 
 # From this repo
-cargo build --release --features mcp   # binaries at ./target/release/{distill,distill-mcp}
+cargo build --release --features mcp
+# → ./target/release/distill  and  ./target/release/distill-mcp
 ```
 
 Prebuilt binaries for macOS (arm64/x64), Linux (arm64/x64), and Windows (x64)
-are attached to every [GitHub Release](https://github.com/gokulnair2001/distill/releases).
-See [RELEASING.md](RELEASING.md) for how releases are produced.
+ship with every [GitHub Release](https://github.com/gokulnair2001/distill/releases).
+See [RELEASING.md](RELEASING.md) for how releases are cut.
+
+---
 
 ## Usage
 
 ```bash
-# From a URL
+# URL
 distill https://en.wikipedia.org/wiki/Markdown
 
-# From a local HTML file
+# Local HTML file
 distill page.html
 
-# From stdin
+# Stdin
 curl -s https://example.com | distill -
 
-# Multiple inputs → one file per input (‑o is treated as a directory).
-# A failing input is reported and skipped; the batch still writes the rest.
+# Several inputs → one .md file each (-o is a directory)
 distill https://a.com https://b.com page.html -o out/
-#   → out/a.com.md, out/b.com.md, out/page.md
+# → out/a.com.md, out/b.com.md, out/page.md
+# A failing input is reported and skipped; the rest still write.
 
-# Options
+# Common flags
 distill <url> \
   --render auto \      # JS rendering: never | auto | always (default: auto)
-  --no-frontmatter \   # omit the YAML metadata block
+  --no-frontmatter \   # omit YAML metadata
   --no-links \         # keep link text only
   --no-images \        # drop images
   --raw \              # skip main-content extraction (convert whole page)
@@ -80,54 +96,110 @@ distill <url> \
 
 ### JavaScript rendering
 
-Client-rendered pages (SPAs whose content is injected by JS) return an empty
-shell over plain HTTP. `distill` handles this **static-first**: it fetches
-statically and, in `--render auto`, only spins up a headless browser
-when the page looks under-rendered (empty `#root`/`#app`, near-empty body).
-`--render always` forces it; `--render never` disables it.
+Some sites (SPAs) only fill in content after JavaScript runs. Over plain HTTP
+you get an empty shell.
 
-Requires an installed Chrome/Chromium/Brave/Edge; set `DISTILL_CHROME` to point
-at a specific binary. If none is found, distill falls back to the static HTML.
+Distill is **static-first**:
 
-> Note: statically pre-rendered sites (Next.js/VitePress SSG, most docs sites)
-> already contain their content, so rendering them changes nothing — it only
-> helps genuinely client-rendered pages.
+| `--render` | Behavior |
+|---|---|
+| `auto` (default) | Fetch HTML normally; start a headless browser only if the page looks under-rendered |
+| `always` | Always use the browser |
+| `never` | Never use the browser (fastest; fails on JS-only pages) |
 
-## Use as an MCP server
+Needs an installed Chrome / Chromium / Brave / Edge. Set `DISTILL_CHROME` to
+point at a specific binary. If none is found, distill falls back to static HTML.
 
-`distill` ships an [MCP](https://modelcontextprotocol.io) server so any local
-agent (Claude Code, etc.) can call it as a tool instead of shelling out. It
-speaks the protocol over stdio and exposes three tools:
+> Most docs sites (VitePress, Next.js SSG, etc.) already ship full HTML — rendering
+> them changes nothing. The browser path only helps genuinely client-rendered pages.
 
-- **`distill_url`** — fetch a URL and convert it. SSRF-guarded (see below).
-- **`distill_urls`** — fetch and convert up to 20 URLs in one call (fetched 4 at
-  a time). Returns one result block per URL, in input order, each prefixed with
-  `<!-- distill url="..." status="ok|error" -->`; a failing URL yields an error
-  block instead of failing the whole batch.
-- **`distill_html`** — convert HTML you already have. No network.
+---
 
-All accept the same knobs as the CLI (`include_links`, `include_images`,
-`frontmatter`, `raw`, `base`; `distill_url`/`distill_urls` also take `render`).
+## How it works
 
-Build the server binary (it's behind a feature flag so the plain CLI stays lean):
-
-```bash
-cargo build --release --features mcp
-# binary at ./target/release/distill-mcp
+```
+URL → fetch → (render?) → metadata → clean → extract → convert → Markdown
 ```
 
-Register it with Claude Code — zero-install via npx (once published), or a
-local build:
+1. **fetch** — Download the page with browser-like headers; follow redirects;
+   decode gzip/brotli and character encodings.
+2. **render?** — Optional headless Chrome, only when the static HTML looks empty
+   or extraction finds almost no content.
+3. **metadata** — Pull title / author / date / lang / canonical from `<head>`.
+4. **clean** — Remove scripts, nav, footer, aside, ads, and other boilerplate
+   (matched by tag and by class/id, with care not to delete real content like
+   forum threads).
+5. **extract** — Score text blocks (Readability-style) and pick the main content
+   region; merge nearby siblings when the page splits content across wrappers.
+6. **convert** — Walk the DOM and emit Markdown: real tables, fenced code with
+   language hints, nested lists, blockquotes, absolute links and images.
+
+---
+
+## Why it's fast
+
+Most of the speed comes from **avoiding work**, not micro-optimizations.
+
+Process-only median on cached HTML: **~16 ms/page** (see [Benchmarks](#benchmarks)).
+Network time dominates end-to-end; that number is the stable, network-free figure.
+
+### Key terms
+
+| Term | Meaning |
+|---|---|
+| **Static fetch** | Download HTML over HTTP as-is — no browser, no JavaScript |
+| **SPA / client-rendered** | Page whose content only appears after JS runs (often an empty shell at first) |
+| **Headless Chrome** | Chrome with no visible window; used only to run JS and dump the final HTML |
+| **DOM** | The tree of HTML elements after parsing (`div`, `p`, `table`, …) |
+| **Deterministic** | Same input always produces byte-identical Markdown |
+| **Process time** | Time spent converting already-downloaded HTML (no network) |
+
+### Four reasons
+
+1. **Static-first** — Docs and Wikipedia-style pages already have content in the
+   HTML. Distill uses that and skips the browser. Chrome runs only when the body
+   looks empty, SPA mounts (`#root`, `#app`, …) are empty, or extraction yields
+   almost nothing (under 200 characters of main content).
+
+2. **Rust + lean deps** — Native binary, small HTML parser (`kuchikiki`), blocking
+   HTTP client. No LLM in the convert path. Release builds use LTO and strip.
+
+3. **Cheap JS when needed** — Shells out to an installed Chrome with `--dump-dom`
+   and a virtual-time budget. No heavy browser-automation library inside the
+   binary. Rendered HTML then reuses the same clean → extract → convert path.
+
+4. **One deterministic pass** — No model, no sampling, no “rewrite for quality.”
+   One pipeline, same output every time.
+
+**In one line:** skip the browser whenever possible; only pay for Chrome on real
+JS-heavy pages.
+
+---
+
+## MCP server
+
+Expose distill as tools any local agent can call
+([Model Context Protocol](https://modelcontextprotocol.io), over stdio):
+
+| Tool | What it does |
+|---|---|
+| `distill_url` | Fetch one URL and convert it (SSRF-guarded) |
+| `distill_urls` | Fetch up to 20 URLs (4 at a time); per-URL ok/error blocks |
+| `distill_html` | Convert HTML you already have — no network |
+
+Same knobs as the CLI (`include_links`, `include_images`, `frontmatter`, `raw`,
+`base`; URL tools also take `render`).
 
 ```bash
-# Published: no install, always latest
+# Register with Claude Code (published package)
 claude mcp add distill -- npx -y -p distill-md distill-mcp
 
-# Local build
+# Or a local build
+cargo build --release --features mcp
 claude mcp add distill -- /absolute/path/to/target/release/distill-mcp
 ```
 
-Or add it to an `mcp.json` yourself:
+Or in `mcp.json`:
 
 ```json
 {
@@ -140,98 +212,67 @@ Or add it to an `mcp.json` yourself:
 }
 ```
 
-(`-p distill-md distill-mcp` selects the `distill-mcp` binary from the
-`distill-md` package, which also provides the `distill` CLI.)
-
 ### SSRF guard
 
-Because `distill_url` will fetch whatever URL an agent hands it, requests to
-non-public addresses — loopback, private ranges, link-local (including the
-`169.254.169.254` cloud-metadata endpoint), and their IPv6 equivalents — are
-**refused by default**, on the initial URL and on every redirect/`meta refresh`
-hop. To distill a local dev server or an internal host, opt out explicitly:
+Agents can pass any URL into `distill_url`. By default, requests to non-public
+addresses are **refused** — loopback, private ranges, link-local (including the
+`169.254.169.254` cloud metadata endpoint), and IPv6 equivalents — on the
+initial URL and every redirect / meta-refresh hop.
+
+To allow a local or internal host:
 
 ```bash
 DISTILL_ALLOW_PRIVATE_HOSTS=1 distill http://localhost:3000
 ```
 
-The same variable governs the CLI and the MCP server.
+Same env var for CLI and MCP.
 
-## How it works
-
-```
-URL → fetch → metadata → clean → extract → convert → Markdown
-```
-
-1. **fetch** — browser-like headers, gzip/brotli, redirect + encoding handling.
-2. **metadata** — title / author / date / lang / canonical from `<head>`.
-3. **clean** — strip scripts, chrome (nav/footer/aside), and boilerplate matched
-   by id/class (word-boundaried so `thread`/`download` survive), plus hidden nodes.
-4. **extract** — Readability-style scoring: text blocks pass points to their
-   parent and grandparent; the link-density-adjusted winner is the main content.
-5. **convert** — DOM→Markdown with real tables, fenced code + language, resolved
-   absolute links, nested lists, blockquotes.
+---
 
 ## Benchmarks
 
-Numbers below are from a 50-URL corpus (`bench/corpus.jsonl`) spanning
-articles, docs, product pages, forum threads, table-heavy pages, and SPAs,
-measured on 2026-08-09 against the current build, head-to-head with **Jina
-Reader**, **Firecrawl**, **trafilatura**, **readability-lxml**, and
-**markitdown**. Reproduce with the harness in [bench/](bench/README.md).
+50-URL corpus (`bench/corpus.jsonl`): articles, docs, product pages, forums,
+table-heavy pages, and SPAs. Measured 2026-08-09 against **Jina Reader**,
+**Firecrawl**, **trafilatura**, **readability-lxml**, and **markitdown**.
+Reproduce with [bench/](bench/README.md).
 
 | metric | distill |
 |---|---|
-| pages | 50 |
-| coverage | 92% returned usable output |
+| coverage | 92% usable output |
 | process time (median, network-free) | ~16 ms/page |
 | output size | ~15.3k tokens/page (avg) |
-| deterministic | yes — byte-identical on re-run |
+| deterministic | yes |
 
-**Structural preservation** — micro-average `Σkept / Σsource` (higher isn't
-always better; `links`/`headings` include page boilerplate), distill vs. the
-field:
+**Structural preservation** (micro-average kept ÷ source; tables and code blocks
+are the high-signal features — link/heading ratios often just mean “kept more nav junk”):
 
 | tool | tables | code blocks | coverage | local? |
 |---|---|---|---|---|
 | **distill** | 0.62 | **0.94** | 92% | yes |
-| jina | 0.27 | 0.17 | 100%* | no (cloud) |
+| jina | 0.27 | 0.17 | 100%\* | no (cloud) |
 | trafilatura | 0.18 | 0.69 | 92% | yes |
 | readability | 0.00 | 0.00 | 80% | yes |
 | markitdown | 0.57 | 0.68 | 66% | yes |
 
-\* jina's coverage is real, but its higher struct mean is inflated by
-boilerplate (links/headings/images all ≥0.9-1.0, meaning it keeps nav
-junk it shouldn't) — on the two high-signal features that actually
-indicate content quality, it's the weakest of the group.
+\* Jina’s coverage is real, but its link/heading/image keep rates are inflated by
+boilerplate. On tables and code blocks it is the weakest of the group.
 
-Honest read: distill leads decisively on both high-signal structural
-features (tables, code blocks) against every alternative, local or cloud,
-at this larger and more representative scale. This benchmark also caught a
-real bug: distill's `--render auto` heuristic missed modern marketing pages
-built from short, scattered content blocks (plenty of raw body text, but
-none of it substantial) — fixed by having the heuristic run the actual
-extraction pipeline as its own trigger signal instead of guessing from word
-counts. One known limitation remains: a small number of heavy client-rendered
-docs sites don't finish populating within the current headless-Chrome render
-budget. Full history of what was found and fixed — including two earlier
-extraction/conversion bugs and three benchmark ground-truth bugs discovered
-along the way — is in [bench/README.md](bench/README.md). End-to-end timing
-is network-dominated and only indicative; the process-only median is the
-stable figure.
+Known limitation: a few heavy client-rendered docs sites do not finish
+populating within the current headless-Chrome time budget. Bug history and
+methodology notes live in [bench/README.md](bench/README.md).
+
+---
 
 ## Roadmap
 
-- [x] **JS rendering** — static-first, headless-Chrome fallback only when the
-      DOM looks under-rendered (SPA coverage without paying browser cost per page).
-- [x] **Benchmark harness** — scored corpus vs Jina / Firecrawl (see `bench/`).
-- [ ] **Page-type awareness** — distinct strategies for docs / listings / tables.
-- [ ] **Structural fidelity** — definition lists, table colspan/rowspan, inline
-      code backtick escaping, `<picture>`/`srcset`.
-- [x] **MCP server** — expose `distill` as a tool any local agent can call
-      (`distill_url` / `distill_urls` / `distill_html`, SSRF-guarded).
-      See "Use as an MCP server".
-- [ ] **Structured extraction** — schema-guided JSON output + RAG chunking.
+- [x] JS rendering — static-first, Chrome only when needed
+- [x] Benchmark harness vs cloud and local alternatives (`bench/`)
+- [x] MCP server (`distill_url` / `distill_urls` / `distill_html`, SSRF-guarded)
+- [ ] Page-type awareness — distinct strategies for docs / listings / tables
+- [ ] More structural fidelity — colspan/rowspan, `<picture>` / `srcset`, …
+- [ ] Structured extraction — schema-guided JSON + RAG chunking
+
+---
 
 ## Development
 

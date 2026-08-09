@@ -31,7 +31,7 @@ Results print as a scorecard and are written to `results/` (`results.json`,
 |---|---|---|
 | `basics` | coverage %, speed (ms), determinism | nothing |
 | `structural` | table / code / link / heading / image preservation vs source | nothing |
-| `efficiency` | token cost (tiktoken if installed, else chars/4) | nothing |
+| `efficiency` | token cost; **gated% / tok/page / pages/1k** (quality-gated pages-per-token) | nothing |
 | `content` | token P/R/F1, ROUGE-L, bloat ratio vs **gold** | gold files |
 | `qa` | ⭐ agent answer accuracy from each tool's output | `ANTHROPIC_API_KEY` |
 
@@ -70,10 +70,16 @@ freely.
 
 ## Interpreting results (important)
 
-- **Coverage % is a weak signal.** A tool can return a small fragment and still
-  "pass". Under-extraction hides here — cross-check with `content` / `qa`.
 - **Token count is double-edged.** Fewer tokens = cheaper *or* = dropped content.
-  Only gold-F1 / agent-QA tell you which.
+  Only gold-F1 / agent-QA tell you which. Prefer the gated efficiency columns:
+  `gated%` (page cleared ≥200 chars + code-block keep when source had code),
+  `tok/page` (mean tokens on gated pages), and `pages/1k` (gated pages per 1k
+  output tokens — higher is better). `pages/1k (common)` restricts to pages
+  every tool gated, so skippers can't win by omitting hard URLs.
+  Read `pages/1k` together with `gated%`: a high pages/1k at low gated% is
+  usually under-extraction (short stubs), not a win.
+- **Coverage % is a weak signal.** A tool can return a small fragment and still
+  "pass". Under-extraction hides here — cross-check with gated% / `content` / `qa`.
 - **Structural preservation counts boilerplate.** `links`/`headings` include nav
   junk, so a higher ratio can just mean "kept more noise". `tables`/`code_blocks`
   are the higher-signal features.

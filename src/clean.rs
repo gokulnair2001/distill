@@ -12,12 +12,28 @@ const DROP_TAGS: &[&str] = &[
 /// Boilerplate identifiers matched against an element's `id` + `class`.
 /// Word-boundaried to avoid nuking things like "thread" (contains "read") or
 /// "download" (contains "ad").
+///
+/// `comment`/`comments` still match (blog comment-section chrome), but known
+/// *forum content* carriers are carved out in [`is_forum_content_ident`] so
+/// table-layout threads (HN's `.comment` / `.comment-tree` / `.commtext`) are
+/// not deleted before conversion.
 static BOILERPLATE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
         r"(?i)(^|[-_ ])(ad|ads|advert|advertisement|banner|breadcrumbs?|byline|comment|comments|cookie|consent|disqus|footer|gdpr|masthead|menu|nav|navbar|navigation|newsletter|popup|promo|related|share|sharing|sidebar|social|sponsor|subscribe|toolbar|widget|modal|overlay|cta|pagination|pager|skip-link|screen-reader)([-_ ]|s?$)",
     )
     .unwrap()
 });
+
+/// Class/id tokens that carry real discussion content on forum-style pages.
+/// Kept even when they would otherwise match the `comment*` boilerplate rule.
+const FORUM_CONTENT_TOKENS: &[&str] = &[
+    "comment",       // HN wraps each body in class="comment"
+    "comment-tree",  // HN thread container
+    "commtext",      // HN comment body
+    "comtr",         // HN comment row
+    "comhead",       // HN author/meta line
+    "fatitem",       // HN story header block
+];
 
 /// Strip scripts, chrome, and boilerplate from the DOM in place.
 /// Returns the (possibly cleaned) root so callers can chain.
@@ -102,6 +118,9 @@ fn drop_by_identifier(root: &NodeRef) {
             to_remove.push(node.clone());
             continue;
         }
+        if is_forum_content_ident(id, class) {
+            continue;
+        }
         if (!id.is_empty() && BOILERPLATE.is_match(id))
             || (!class.is_empty() && BOILERPLATE.is_match(class))
         {
@@ -111,6 +130,21 @@ fn drop_by_identifier(root: &NodeRef) {
     for n in to_remove {
         n.detach();
     }
+}
+
+/// True when `id`/`class` names a forum content carrier we must not strip.
+///
+/// Exact token match only (no hyphen-splitting): plural/`comments` section
+/// chrome (WordPress `#comments`, `.comments-area`, `.comment-form`) still
+/// matches boilerplate and is dropped; only the tokens that hold the actual
+/// thread body are preserved.
+fn is_forum_content_ident(id: &str, class: &str) -> bool {
+    let is_keep = |tok: &str| {
+        FORUM_CONTENT_TOKENS
+            .iter()
+            .any(|k| tok.eq_ignore_ascii_case(k))
+    };
+    (!id.is_empty() && is_keep(id)) || class.split_whitespace().any(is_keep)
 }
 
 fn drop_hidden(root: &NodeRef) {
