@@ -170,3 +170,82 @@ fn no_links_flag_keeps_text_only() {
     assert!(out.contains("documentation"), "got: {out}");
     assert!(!out.contains("]("), "link markup leaked: {out}");
 }
+
+#[test]
+fn hn_style_thread_keeps_comments_as_flow() {
+    // Minimal HN-shaped DOM: nested layout tables + .comment/.commtext bodies.
+    // Regression: boilerplate used to strip class="comment", and convert emitted
+    // the chrome as a GFM table with zero discussion text.
+    let html = r#"<body>
+      <table>
+        <tr><td>
+          <table class="fatitem"><tr><td>
+            <a href="https://example.com/story">Dropbox launch</a>
+            100 points by <a href="user?id=pg">pg</a>
+          </td></tr></table>
+          <table class="comment-tree">
+            <tr class="athing comtr"><td>
+              <div class="comment">
+                <div class="comhead"><a href="user?id=alice">alice</a></div>
+                <div class="commtext">I have a few qualms with this app and here is why it matters.</div>
+              </div>
+            </td></tr>
+            <tr class="athing comtr"><td>
+              <div class="comment">
+                <div class="comhead"><a href="user?id=bob">bob</a></div>
+                <div class="commtext">Plug and play matters for people who will not build this themselves.</div>
+              </div>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>"#;
+    let out = md(html);
+    assert!(
+        out.contains("I have a few qualms"),
+        "alice comment missing: {out}"
+    );
+    assert!(
+        out.contains("Plug and play matters"),
+        "bob comment missing: {out}"
+    );
+    assert!(out.contains("Dropbox launch"), "story title missing: {out}");
+    // Must not smash the thread into a GFM table.
+    assert!(
+        !out.contains("| --- |"),
+        "layout tables emitted as GFM: {out}"
+    );
+}
+
+#[test]
+fn blog_comments_section_still_stripped() {
+    // Plural/section chrome must still die; only forum content tokens are kept.
+    let html = r#"<body>
+      <article><p>Article body with enough words to win extraction scoring against the noise below it here.</p></article>
+      <div id="comments" class="comments-area">
+        <h2>Comments</h2>
+        <p>Please leave a comment in this comments section of the blog post today.</p>
+      </div>
+    </body>"#;
+    let out = md(html);
+    assert!(out.contains("Article body"), "got: {out}");
+    assert!(
+        !out.to_lowercase().contains("leave a comment"),
+        "comments section leaked: {out}"
+    );
+}
+
+#[test]
+fn data_tables_still_render_as_gfm() {
+    // Layout-table detection must not unwrap real headered tables.
+    let html = r#"<body><article>
+      <p>Parameters are listed below in a compact reference table for the API endpoint.</p>
+      <table class="wikitable">
+        <tr><th>Name</th><th>Type</th></tr>
+        <tr><td>id</td><td>string</td></tr>
+      </table>
+    </article></body>"#;
+    let out = md(html);
+    assert!(out.contains("| Name | Type |"), "got: {out}");
+    assert!(out.contains("| id | string |"), "got: {out}");
+}

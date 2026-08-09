@@ -6,4 +6,5 @@ Cargo.lock.bak
 # bench
 bench/.venv/
 bench/results/
+bench/.html_cache/
 **/__pycache__/

@@ -79,7 +79,13 @@ fn block_element(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
         "dl" => render_dl(node, ctx, depth),
         "pre" => render_pre(node),
         "blockquote" => render_blockquote(node, ctx, depth),
-        "table" => render_table(node, ctx),
+        "table" => {
+            if is_layout_table(node) {
+                unwrap_layout_table(node, ctx, depth)
+            } else {
+                render_table(node, ctx)
+            }
+        }
         "hr" => "---\n\n".to_string(),
         "br" => String::new(),
         // Containers: recurse.
@@ -269,6 +275,102 @@ struct SrcCell {
     colspan: usize,
     rowspan: usize,
     is_th: bool,
+}
+
+/// Is this a layout/chrome table rather than tabular data?
+///
+/// Conservative: prefer false (emit GFM) unless signals are strong. Nested
+/// tables and known forum layout classes can't become useful GFM anyway.
+fn is_layout_table(node: &NodeRef) -> bool {
+    if attr(node, "role").as_deref() == Some("presentation") {
+        return true;
+    }
+    let class = attr(node, "class").unwrap_or_default().to_ascii_lowercase();
+    // Real data tables — never unwrap.
+    if class.split_whitespace().any(|c| c.contains("wikitable") || c.contains("data-table")) {
+        return false;
+    }
+    // Known forum / chrome layout classes (HN and similar).
+    if class
+        .split_whitespace()
+        .any(|c| matches!(c, "fatitem" | "comment-tree" | "itemlist" | "athing" | "comtr"))
+    {
+        return true;
+    }
+    // A table that wraps other tables is a layout scaffold (GFM can't nest).
+    if has_descendant_table(node) {
+        return true;
+    }
+    // Nested into another table and lacking header cells → layout cell chrome.
+    if table_ancestor(node) && !has_header_cell(node) {
+        return true;
+    }
+    false
+}
+
+fn has_descendant_table(node: &NodeRef) -> bool {
+    for child in node.children() {
+        if element_name(&child).as_deref() == Some("table") {
+            return true;
+        }
+        if has_descendant_table(&child) {
+            return true;
+        }
+    }
+    false
+}
+
+fn table_ancestor(node: &NodeRef) -> bool {
+    let mut cur = node.parent();
+    while let Some(n) = cur {
+        if element_name(&n).as_deref() == Some("table") {
+            return true;
+        }
+        cur = n.parent();
+    }
+    false
+}
+
+fn has_header_cell(node: &NodeRef) -> bool {
+    node.select("th")
+        .map(|mut s| s.next().is_some())
+        .unwrap_or(false)
+}
+
+/// Flatten a layout table into normal flow Markdown (story + comments, etc.).
+///
+/// Walks `table/thead/tbody/tfoot/tr` as transparent containers and renders
+/// each `td`/`th`'s children as blocks so nested content (including nested
+/// layout tables) is visited once via normal `block_element` dispatch.
+fn unwrap_layout_table(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
+    unwrap_table_scaffold(node, ctx, depth)
+}
+
+fn unwrap_table_scaffold(node: &NodeRef, ctx: &Ctx, depth: usize) -> String {
+    match element_name(node).as_deref() {
+        Some("table") | Some("thead") | Some("tbody") | Some("tfoot") | Some("tr") => {
+            let mut out = String::new();
+            for child in node.children() {
+                out.push_str(&unwrap_table_scaffold(&child, ctx, depth));
+            }
+            out
+        }
+        Some("td") | Some("th") => render_children_as_blocks(node, ctx, depth),
+        Some(_) => block_element(node, ctx, depth),
+        None => {
+            // Text nodes as direct table children are rare; ignore whitespace.
+            if let Some(text) = node.as_text() {
+                let t = collapse_ws(&text.borrow());
+                if t.trim().is_empty() {
+                    String::new()
+                } else {
+                    format!("{}\n\n", t.trim())
+                }
+            } else {
+                String::new()
+            }
+        }
+    }
 }
 
 fn render_table(node: &NodeRef, ctx: &Ctx) -> String {
