@@ -15,7 +15,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -23,35 +23,74 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
             mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          colors: {
+            ink: '#12141a',
+            paper: '#f4f6f8',
+            mist: '#e6eaef',
           },
         },
       },
     };
   </script>
   <style>
-    body { -webkit-font-smoothing: antialiased; }
-    ::selection { background: #18181b; color: #fff; }
+    :root {
+      --ink: #12141a;
+      --paper: #f4f6f8;
+      --mist: #e6eaef;
+      --line: #d5dbe3;
+      --muted: #5c6570;
+    }
+    body {
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(18, 40, 72, 0.06), transparent 55%),
+        radial-gradient(900px 480px at 100% 0%, rgba(40, 90, 80, 0.05), transparent 50%),
+        linear-gradient(180deg, #f4f6f8 0%, #eef2f5 50%, #f4f6f8 100%);
+      color: var(--muted);
+    }
+    ::selection { background: var(--ink); color: #fff; }
     .mono-tight { font-variant-ligatures: none; }
     .copy-btn { opacity: 0; transition: opacity .15s ease; }
     .code-wrap:hover .copy-btn { opacity: 1; }
+    .reveal {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .reveal.in {
+      opacity: 1;
+      transform: none;
+    }
+    .stat-num {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+    }
+    .brand-mark {
+      background: linear-gradient(135deg, #1a1a1c 0%, #2c2c30 55%, #1a1a1c 100%);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
   </style>
 </head>
 
-<body class="bg-white text-zinc-600 font-sans">
+<body class="font-sans text-[15px]">
 
   <!-- ===== Nav ===== -->
-  <header class="sticky top-0 z-20 border-b border-zinc-200 bg-white/85 backdrop-blur">
+  <header class="sticky top-0 z-20 border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--paper)_88%,transparent)] backdrop-blur">
     <nav class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-      <a href="#top" class="flex items-center gap-2 font-mono text-[15px] font-semibold text-zinc-900">
-        <span class="grid h-6 w-6 place-items-center rounded-md bg-zinc-900 text-sm text-white">d</span>
+      <a href="#top" class="flex items-center gap-2.5 font-mono text-[15px] font-semibold text-ink">
+        <span class="brand-mark grid h-7 w-7 place-items-center rounded-md text-sm text-white">d</span>
         distill
       </a>
-      <div class="flex items-center gap-6 text-sm text-zinc-500">
-        <a href="#try" class="hidden sm:inline hover:text-zinc-900 transition">Try it</a>
-        <a href="#install" class="hover:text-zinc-900 transition">Install</a>
-        <a href="https://github.com/gokulnair2001/distill" class="hover:text-zinc-900 transition">GitHub&nbsp;↗</a>
+      <div class="flex items-center gap-6 text-sm text-[var(--muted)]">
+        <a href="#try" class="hidden sm:inline hover:text-ink transition">Try it</a>
+        <a href="#numbers" class="hidden sm:inline hover:text-ink transition">Numbers</a>
+        <a href="#install" class="hover:text-ink transition">Install</a>
+        <a href="https://github.com/gokulnair2001/distill" class="hover:text-ink transition">GitHub&nbsp;↗</a>
       </div>
     </nav>
   </header>
@@ -59,170 +98,268 @@
   <main id="top" class="mx-auto max-w-5xl px-6">
 
     <!-- ===== Hero ===== -->
-    <section class="pt-16 pb-12 sm:pt-20">
-      <h1 class="max-w-2xl text-4xl font-bold leading-[1.1] tracking-tight text-zinc-900 sm:text-5xl">
-        Clean, agent-ready Markdown from any website.
+    <section class="pt-16 pb-14 sm:pt-24 sm:pb-16">
+      <p class="reveal font-mono text-sm font-medium tracking-tight text-ink">distill</p>
+      <h1 class="reveal mt-3 max-w-2xl text-4xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-5xl" style="transition-delay:.06s">
+        Clean Markdown an agent can actually use.
       </h1>
-      <p class="mt-5 max-w-xl text-lg leading-relaxed text-zinc-500">
-        <span class="font-mono text-[0.95em] text-zinc-900">distill</span> is a local-first CLI and
-        MCP server that turns a URL or raw HTML into Markdown an LLM agent can actually use —
-        boilerplate stripped, structure preserved, links resolved. Fast, private, deterministic.
+      <p class="reveal mt-5 max-w-xl text-lg leading-relaxed" style="transition-delay:.12s">
+        Local-first CLI and MCP server. Strip the chrome, keep the tables,
+        resolve the links. Same input → same Markdown, every time.
       </p>
 
-      <div class="mt-7 flex flex-wrap items-center gap-3">
-        <a href="#try" class="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 transition">Try it in the browser</a>
-        <a href="https://github.com/gokulnair2001/distill" class="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 transition">GitHub</a>
+      <div class="reveal mt-8 flex flex-wrap items-center gap-3" style="transition-delay:.18s">
+        <a href="#try" class="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 transition">Try it in the browser</a>
+        <a href="#install" class="rounded-md border border-[var(--line)] bg-white/50 px-5 py-2.5 text-sm font-medium text-ink hover:bg-white transition">Install</a>
       </div>
 
-      <!-- quick install one-liner -->
-      <div class="code-wrap group relative mt-8 max-w-xl">
-        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
-        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+      <div class="reveal code-wrap group relative mt-9 max-w-xl" style="transition-delay:.24s">
+        <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,.6)]"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
+        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
       </div>
     </section>
 
-    <!-- ===== Try it ===== -->
-    <section id="try" class="scroll-mt-20 border-t border-zinc-200 py-14">
-      <div class="flex items-baseline justify-between">
-        <h2 class="text-2xl font-semibold text-zinc-900">Try it</h2>
-        <span class="text-xs text-zinc-400">runs the real distill core, in your browser</span>
-      </div>
-      <p class="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
-        Paste HTML below and distill converts it to Markdown — the actual Rust engine compiled to
-        WebAssembly, running fully client-side. No server, nothing leaves the page.
-      </p>
-      <div class="mt-4 max-w-xl rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-relaxed text-zinc-500">
-        <span class="font-medium text-zinc-800">Note:</span> distill normally takes a
-        <span class="font-medium text-zinc-800">URL</span> and scrapes it to Markdown
-        (<span class="font-mono text-zinc-700">distill &lt;url&gt;</span>). A browser can't fetch other
-        sites directly (CORS), so this demo runs the <span class="font-medium text-zinc-800">HTML&nbsp;→&nbsp;Markdown</span>
-        step. For real URL scraping, use the CLI or MCP server below.
+    <!-- ===== Numbers ===== -->
+    <section id="numbers" class="scroll-mt-20 border-t border-[var(--line)] py-14">
+      <div class="reveal flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-semibold tracking-tight text-ink">Measured, not marketed</h2>
+          <p class="mt-2 max-w-xl text-sm leading-relaxed">
+            50-URL corpus across articles, docs, product pages, forums, tables, and SPAs —
+            process time is network-free median on the current build.
+          </p>
+        </div>
+        <a href="https://github.com/gokulnair2001/distill/tree/main/bench" class="text-sm text-ink underline underline-offset-4 hover:no-underline shrink-0">Reproduce in <span class="font-mono">bench/</span></a>
       </div>
 
-      <div class="mt-6 grid gap-4 md:grid-cols-2">
+      <div class="reveal mt-10 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4" style="transition-delay:.08s">
         <div>
-          <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">HTML in</label>
+          <p class="stat-num text-3xl font-semibold tracking-tight text-ink sm:text-4xl" data-count="92" data-suffix="%">0%</p>
+          <p class="mt-1 text-sm">coverage<br /><span class="text-xs">usable output returned</span></p>
+        </div>
+        <div>
+          <p class="stat-num text-3xl font-semibold tracking-tight text-ink sm:text-4xl" data-count="16" data-prefix="~" data-suffix=" ms">~0 ms</p>
+          <p class="mt-1 text-sm">per page<br /><span class="text-xs">median process time</span></p>
+        </div>
+        <div>
+          <p class="stat-num text-3xl font-semibold tracking-tight text-ink sm:text-4xl" data-count="94" data-suffix="%">0%</p>
+          <p class="mt-1 text-sm">code kept<br /><span class="text-xs">fenced blocks preserved</span></p>
+        </div>
+        <div>
+          <p class="stat-num text-3xl font-semibold tracking-tight text-ink sm:text-4xl" data-count="62" data-suffix="%">0%</p>
+          <p class="mt-1 text-sm">tables kept<br /><span class="text-xs">structure preserved</span></p>
+        </div>
+      </div>
+
+      <div class="reveal mt-12 overflow-x-auto" style="transition-delay:.12s">
+        <table class="w-full min-w-[32rem] text-left text-sm">
+          <caption class="sr-only">Structural preservation vs local and cloud alternatives</caption>
+          <thead>
+            <tr class="border-b border-[var(--line)] text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+              <th class="pb-3 pr-4 font-medium">Tool</th>
+              <th class="pb-3 pr-4 font-medium">Tables</th>
+              <th class="pb-3 pr-4 font-medium">Code</th>
+              <th class="pb-3 pr-4 font-medium">Coverage</th>
+              <th class="pb-3 font-medium">Runs</th>
+            </tr>
+          </thead>
+          <tbody class="text-ink">
+            <tr class="border-b border-[var(--line)] bg-white/40">
+              <td class="py-3 pr-4 font-mono font-medium">distill</td>
+              <td class="py-3 pr-4 font-mono">0.62</td>
+              <td class="py-3 pr-4 font-mono font-semibold">0.94</td>
+              <td class="py-3 pr-4 font-mono">92%</td>
+              <td class="py-3">local</td>
+            </tr>
+            <tr class="border-b border-[var(--line)]">
+              <td class="py-3 pr-4 font-mono">jina</td>
+              <td class="py-3 pr-4 font-mono">0.27</td>
+              <td class="py-3 pr-4 font-mono">0.17</td>
+              <td class="py-3 pr-4 font-mono">100%</td>
+              <td class="py-3">cloud</td>
+            </tr>
+            <tr class="border-b border-[var(--line)]">
+              <td class="py-3 pr-4 font-mono">trafilatura</td>
+              <td class="py-3 pr-4 font-mono">0.18</td>
+              <td class="py-3 pr-4 font-mono">0.69</td>
+              <td class="py-3 pr-4 font-mono">92%</td>
+              <td class="py-3">local</td>
+            </tr>
+            <tr class="border-b border-[var(--line)]">
+              <td class="py-3 pr-4 font-mono">markitdown</td>
+              <td class="py-3 pr-4 font-mono">0.57</td>
+              <td class="py-3 pr-4 font-mono">0.68</td>
+              <td class="py-3 pr-4 font-mono">66%</td>
+              <td class="py-3">local</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4 font-mono">readability</td>
+              <td class="py-3 pr-4 font-mono">0.00</td>
+              <td class="py-3 pr-4 font-mono">0.00</td>
+              <td class="py-3 pr-4 font-mono">80%</td>
+              <td class="py-3">local</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="reveal mt-4 text-xs leading-relaxed" style="transition-delay:.16s">
+        Structural scores are micro-average Σkept / Σsource. Higher isn’t always better on links/headings
+        (boilerplate inflation). Tables and code blocks are the high-signal features for agent use.
+        Deterministic: byte-identical Markdown on re-run.
+      </p>
+    </section>
+
+    <!-- ===== Try it ===== -->
+    <section id="try" class="scroll-mt-20 border-t border-[var(--line)] py-14">
+      <div class="reveal flex items-baseline justify-between gap-4">
+        <h2 class="text-2xl font-semibold tracking-tight text-ink">Try it</h2>
+        <span class="text-xs text-[var(--muted)]">real Rust core → WASM, in your browser</span>
+      </div>
+      <p class="reveal mt-2 max-w-xl text-sm leading-relaxed">
+        Paste HTML and distill converts it to Markdown client-side. No server, nothing leaves the page.
+      </p>
+      <div class="reveal mt-4 max-w-2xl rounded-md border border-[var(--line)] bg-white/50 px-4 py-3 text-sm leading-relaxed">
+        <span class="font-medium text-ink">Note:</span> the CLI normally takes a
+        <span class="font-medium text-ink">URL</span>
+        (<span class="font-mono text-ink"> distill &lt;url&gt;</span>.
+        Browsers can’t fetch arbitrary sites (CORS), so this demo runs the
+        <span class="font-medium text-ink">HTML → Markdown</span> step only.
+      </div>
+
+      <div class="reveal mt-6 grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-[var(--muted)]">HTML in</label>
           <textarea id="html-in" spellcheck="false"
-            class="mono-tight h-64 w-full resize-y rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-[13px] leading-relaxed text-zinc-800 focus:border-zinc-400 focus:outline-none focus:ring-0"
+            class="mono-tight h-72 w-full resize-y rounded-md border border-[var(--line)] bg-white/70 p-3 text-[13px] leading-relaxed text-ink focus:border-zinc-400 focus:outline-none focus:ring-0"
             placeholder="&lt;article&gt;&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;Some &lt;a href='/x'&gt;content&lt;/a&gt;.&lt;/p&gt;&lt;/article&gt;"></textarea>
-          <div class="mt-2 flex items-center gap-3">
+          <div class="mt-2 flex flex-wrap items-center gap-3">
             <button id="run-btn"
-              class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40 transition">
+              class="rounded-md bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40 transition">
               Distill →
             </button>
-            <button id="sample-btn" class="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900">Load a sample</button>
-            <span id="engine-status" class="text-xs text-zinc-400"></span>
+            <button id="sample-btn" class="text-sm text-[var(--muted)] underline underline-offset-4 hover:text-ink">Load a sample</button>
+            <span id="engine-status" class="text-xs text-[var(--muted)]"></span>
           </div>
         </div>
         <div>
-          <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">Markdown out</label>
-          <pre id="md-out" class="mono-tight h-64 w-full overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-[13px] leading-relaxed text-zinc-800"><code class="text-zinc-400">Output appears here…</code></pre>
+          <div class="mb-2 flex items-center justify-between">
+            <label class="block text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Markdown out</label>
+            <span id="out-meta" class="text-xs text-[var(--muted)]"></span>
+          </div>
+          <pre id="md-out" class="mono-tight h-72 w-full overflow-auto rounded-md border border-[var(--line)] bg-white/70 p-3 text-[13px] leading-relaxed text-ink"><code class="text-[var(--muted)]">Output appears here…</code></pre>
         </div>
       </div>
     </section>
 
     <!-- ===== Features ===== -->
-    <section class="border-t border-zinc-200 py-14">
-      <div class="grid gap-x-10 gap-y-7 sm:grid-cols-2">
+    <section class="border-t border-[var(--line)] py-14">
+      <h2 class="reveal text-2xl font-semibold tracking-tight text-ink">Built for agents, not reader mode</h2>
+      <p class="reveal mt-2 max-w-xl text-sm leading-relaxed">
+        Most extractors optimize for blog posts. Agents need API docs, pricing tables,
+        forum threads, and reference pages — structural fidelity first.
+      </p>
+      <div class="reveal mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-2" style="transition-delay:.08s">
         <div>
-          <h3 class="font-semibold text-zinc-900">Local &amp; private</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">No cloud, no per-page cost. Nothing leaves your machine.</p>
+          <h3 class="font-semibold text-ink">Local &amp; private</h3>
+          <p class="mt-1.5 text-sm leading-relaxed">No cloud API, no per-page cost. Nothing leaves your machine.</p>
         </div>
         <div>
-          <h3 class="font-semibold text-zinc-900">Deterministic</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Byte-identical Markdown for the same input, every run.</p>
+          <h3 class="font-semibold text-ink">Deterministic</h3>
+          <p class="mt-1.5 text-sm leading-relaxed">Byte-identical Markdown for the same input, every run.</p>
         </div>
         <div>
-          <h3 class="font-semibold text-zinc-900">Structure-preserving</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Real tables, fenced code with language, nested lists, blockquotes.</p>
+          <h3 class="font-semibold text-ink">Structure-preserving</h3>
+          <p class="mt-1.5 text-sm leading-relaxed">Real tables, fenced code with language tags, nested lists, blockquotes.</p>
         </div>
         <div>
-          <h3 class="font-semibold text-zinc-900">Metadata &amp; links</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Title, author, date in YAML frontmatter; links resolved to absolute URLs.</p>
+          <h3 class="font-semibold text-ink">Metadata &amp; links</h3>
+          <p class="mt-1.5 text-sm leading-relaxed">Title, author, date in YAML frontmatter; relative links resolved absolute.</p>
         </div>
       </div>
     </section>
 
     <!-- ===== Install ===== -->
-    <section id="install" class="scroll-mt-20 border-t border-zinc-200 py-14">
-      <h2 class="text-2xl font-semibold text-zinc-900">Install</h2>
-      <p class="mt-2 text-sm text-zinc-500">
-        Published as <span class="font-mono text-zinc-900">distill-md</span>; the installed command is still
-        <span class="font-mono text-zinc-900">distill</span>.
+    <section id="install" class="scroll-mt-20 border-t border-[var(--line)] py-14">
+      <h2 class="reveal text-2xl font-semibold tracking-tight text-ink">Install</h2>
+      <p class="reveal mt-2 text-sm">
+        Published as <span class="font-mono text-ink">distill-md</span>; the installed command is still
+        <span class="font-mono text-ink">distill</span>.
       </p>
 
-      <div class="mt-6 space-y-5 text-sm">
+      <div class="reveal mt-6 space-y-5 text-sm">
         <div>
-          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">Agents · MCP server (no install)</p>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Agents · MCP server (no install)</p>
           <div class="code-wrap group relative">
-            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
-            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+            <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-ink"><code data-copy>npx -y -p distill-md distill-mcp</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
           </div>
         </div>
         <div>
-          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">macOS / Linux</p>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">macOS / Linux</p>
           <div class="code-wrap group relative">
-            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>curl -LsSf https://github.com/gokulnair2001/distill/releases/latest/download/distill-md-installer.sh | sh</code></pre>
-            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+            <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-ink"><code data-copy>curl -LsSf https://github.com/gokulnair2001/distill/releases/latest/download/distill-md-installer.sh | sh</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
           </div>
         </div>
         <div>
-          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">Rust</p>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Rust</p>
           <div class="code-wrap group relative">
-            <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800"><code data-copy>cargo install distill-md</code></pre>
-            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+            <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-ink"><code data-copy>cargo install distill-md</code></pre>
+            <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
           </div>
         </div>
       </div>
-      <p class="mt-5 text-sm text-zinc-500">
+      <p class="reveal mt-5 text-sm">
         Prebuilt binaries for macOS, Linux, and Windows on every
-        <a href="https://github.com/gokulnair2001/distill/releases" class="text-zinc-900 underline underline-offset-4 hover:no-underline">GitHub Release</a>.
+        <a href="https://github.com/gokulnair2001/distill/releases" class="text-ink underline underline-offset-4 hover:no-underline">GitHub Release</a>.
       </p>
     </section>
 
     <!-- ===== Usage ===== -->
-    <section class="border-t border-zinc-200 py-14">
-      <h2 class="text-2xl font-semibold text-zinc-900">Usage</h2>
-      <div class="code-wrap group relative mt-6">
-        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm leading-relaxed text-zinc-800"><code data-copy><span class="text-zinc-400"># From a URL</span>
+    <section class="border-t border-[var(--line)] py-14">
+      <h2 class="reveal text-2xl font-semibold tracking-tight text-ink">Usage</h2>
+      <div class="reveal code-wrap group relative mt-6">
+        <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-4 text-sm leading-relaxed text-ink"><code data-copy><span class="text-[var(--muted)]"># From a URL</span>
 distill https://en.wikipedia.org/wiki/Markdown
 
-<span class="text-zinc-400"># From a local file, or stdin</span>
+<span class="text-[var(--muted)]"># From a local file, or stdin</span>
 distill page.html
 curl -s https://example.com | distill -
 
-<span class="text-zinc-400"># Multiple inputs → one file each</span>
+<span class="text-[var(--muted)]"># Multiple inputs → one file each</span>
 distill https://a.com https://b.com -o out/</code></pre>
-        <button class="copy-btn absolute right-2 top-2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+        <button class="copy-btn absolute right-2 top-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
       </div>
     </section>
 
     <!-- ===== MCP ===== -->
-    <section class="border-t border-zinc-200 py-14">
-      <h2 class="text-2xl font-semibold text-zinc-900">Use with an agent</h2>
-      <p class="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
+    <section class="border-t border-[var(--line)] py-14">
+      <h2 class="reveal text-2xl font-semibold tracking-tight text-ink">Use with an agent</h2>
+      <p class="reveal mt-2 max-w-xl text-sm leading-relaxed">
         Run distill as an
-        <a href="https://modelcontextprotocol.io" class="text-zinc-900 underline underline-offset-4 hover:no-underline">MCP</a>
-        server and any local agent (Claude Code, etc.) can call it as a tool —
-        <span class="font-mono text-zinc-900">distill_url</span>,
-        <span class="font-mono text-zinc-900">distill_urls</span>,
-        <span class="font-mono text-zinc-900">distill_html</span>. SSRF-guarded by default.
+        <a href="https://modelcontextprotocol.io" class="text-ink underline underline-offset-4 hover:no-underline">MCP</a>
+        server and any local agent (Claude Code, etc.) can call
+        <span class="font-mono text-ink">distill_url</span>,
+        <span class="font-mono text-ink">distill_urls</span>,
+        <span class="font-mono text-ink">distill_html</span>. SSRF-guarded by default.
       </p>
-      <div class="code-wrap group relative mt-6">
-        <pre class="mono-tight overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800"><code data-copy>claude mcp add distill -- npx -y -p distill-md distill-mcp</code></pre>
-        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:text-zinc-900" data-copy-btn>Copy</button>
+      <div class="reveal code-wrap group relative mt-6">
+        <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-sm text-ink"><code data-copy>claude mcp add distill -- npx -y -p distill-md distill-mcp</code></pre>
+        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
       </div>
     </section>
 
   </main>
 
   <!-- ===== Footer ===== -->
-  <footer class="border-t border-zinc-200">
-    <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-zinc-400 sm:flex-row">
-      <span>distill · GPL-3.0-or-later</span>
+  <footer class="border-t border-[var(--line)]">
+    <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-[var(--muted)] sm:flex-row">
+      <span class="font-mono text-ink">distill</span>
+      <span>GPL-3.0-or-later · v0.2.1</span>
       <div class="flex gap-6">
-        <a href="https://github.com/gokulnair2001/distill" class="hover:text-zinc-900 transition">GitHub</a>
-        <a href="https://github.com/gokulnair2001/distill/releases" class="hover:text-zinc-900 transition">Releases</a>
+        <a href="https://github.com/gokulnair2001/distill" class="hover:text-ink transition">GitHub</a>
+        <a href="https://github.com/gokulnair2001/distill/releases" class="hover:text-ink transition">Releases</a>
+        <a href="#numbers" class="hover:text-ink transition">Benchmarks</a>
       </div>
     </div>
   </footer>
@@ -240,13 +377,82 @@ distill https://a.com https://b.com -o out/</code></pre>
       });
     });
 
+    // --- scroll reveal ---
+    const revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      revealEls.forEach((el) => io.observe(el));
+      // hero is above the fold — kick it immediately
+      requestAnimationFrame(() => {
+        document.querySelectorAll('#top .reveal').forEach((el) => el.classList.add('in'));
+      });
+    } else {
+      revealEls.forEach((el) => el.classList.add('in'));
+    }
+
+    // --- animated stats ---
+    function animateCount(el) {
+      const target = Number(el.dataset.count || 0);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) {
+        el.textContent = prefix + target + suffix;
+        return;
+      }
+      const duration = 900;
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = prefix + Math.round(target * eased) + suffix;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    const statsSection = document.getElementById('numbers');
+    let statsDone = false;
+    if ('IntersectionObserver' in window) {
+      const sio = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting) && !statsDone) {
+          statsDone = true;
+          document.querySelectorAll('[data-count]').forEach(animateCount);
+          sio.disconnect();
+        }
+      }, { threshold: 0.35 });
+      sio.observe(statsSection);
+    } else {
+      document.querySelectorAll('[data-count]').forEach(animateCount);
+    }
+
     // --- try-it playground ---
     const SAMPLE = `<article>
   <h1>Release notes</h1>
   <p>distill now resolves <a href="/docs">relative links</a> to absolute URLs.</p>
   <h2>Highlights</h2>
-  <ul><li>Real tables</li><li>Fenced code blocks</li></ul>
-  <pre><code>distill https://example.com</code></pre>
+  <ul>
+    <li>Real tables</li>
+    <li>Fenced code blocks</li>
+    <li>YAML frontmatter</li>
+  </ul>
+  <h2>Benchmarks</h2>
+  <table>
+    <thead><tr><th>metric</th><th>value</th></tr></thead>
+    <tbody>
+      <tr><td>coverage</td><td>92%</td></tr>
+      <tr><td>code kept</td><td>0.94</td></tr>
+      <tr><td>median</td><td>~16 ms</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-bash">distill https://example.com</code></pre>
 </article>`;
 
     const htmlIn = document.getElementById('html-in');
@@ -254,30 +460,41 @@ distill https://a.com https://b.com -o out/</code></pre>
     const runBtn = document.getElementById('run-btn');
     const sampleBtn = document.getElementById('sample-btn');
     const status = document.getElementById('engine-status');
+    const outMeta = document.getElementById('out-meta');
 
     sampleBtn.addEventListener('click', () => { htmlIn.value = SAMPLE; });
 
-    let engine = null; // set to the wasm `distill_html` binding once loaded
+    let engine = null;
 
     async function loadEngine() {
       if (engine) return engine;
       status.textContent = 'loading engine…';
       try {
         const mod = await import('./pkg/distill_wasm.js');
-        await mod.default();                       // init wasm
-        engine = (html) => mod.distill_html(html); // string -> markdown
-        status.textContent = '';
+        await mod.default();
+        engine = (html) => mod.distill_html(html);
+        status.textContent = 'engine ready';
+        setTimeout(() => { if (status.textContent === 'engine ready') status.textContent = ''; }, 1600);
       } catch (e) {
-        status.textContent = 'engine unavailable — run the WASM build (see README)';
+        status.textContent = 'engine unavailable — rebuild WASM (see README)';
         throw e;
       }
       return engine;
+    }
+
+    // warm the wasm in the background so first click is snappy
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => { loadEngine().catch(() => {}); }, { timeout: 2500 });
+    } else {
+      setTimeout(() => { loadEngine().catch(() => {}); }, 800);
     }
 
     runBtn.addEventListener('click', async () => {
       const html = htmlIn.value.trim();
       if (!html) { htmlIn.focus(); return; }
       runBtn.disabled = true;
+      outMeta.textContent = '';
+      const t0 = performance.now();
       try {
         const run = await loadEngine();
         const md = run(html);
@@ -285,8 +502,10 @@ distill https://a.com https://b.com -o out/</code></pre>
         const code = document.createElement('code');
         code.textContent = md;
         mdOut.appendChild(code);
+        const ms = Math.max(1, Math.round(performance.now() - t0));
+        outMeta.textContent = ms + ' ms · ' + md.length.toLocaleString() + ' chars';
       } catch (e) {
-        mdOut.innerHTML = '<code class="text-red-500">' + (e && e.message ? e.message : 'Failed to run') + '</code>';
+        mdOut.innerHTML = '<code class="text-red-600">' + (e && e.message ? e.message : 'Failed to run') + '</code>';
       } finally {
         runBtn.disabled = false;
       }
