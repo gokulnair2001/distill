@@ -165,3 +165,54 @@ def content_scores(md: str, gold: str) -> dict:
 
 def coverage_ok(md: str, min_chars: int = 200) -> bool:
     return len(md.strip()) >= min_chars
+
+
+# -------------------------------- quality-gated efficiency (pages / tokens)
+
+# Floor shared with coverage_ok: stubs below this do not count as a "page read".
+MIN_GATED_CHARS = 200
+
+
+def gated_ok(
+    md: str,
+    structural: dict | None = None,
+    expected: dict | None = None,
+) -> bool:
+    """Did this output clear the quality gate for efficiency scoring?
+
+    Gate (no QA/gold required):
+      1. At least MIN_GATED_CHARS of Markdown (same floor as coverage).
+      2. If the source had code blocks and we have structural scores, keep ≥1.
+         (Tables are *not* gated yet — expected_features still counts layout
+         tables on HN-like pages, which would falsely fail good unwraps.)
+    """
+    if not coverage_ok(md, MIN_GATED_CHARS):
+        return False
+    if structural is not None and expected is not None:
+        exp_code = expected.get("code_blocks") or 0
+        if exp_code > 0:
+            got = (structural.get("_raw") or {}).get("code_blocks") or 0
+            if got < 1:
+                return False
+    return True
+
+
+def efficiency_pages_per_token(rows: list[dict]) -> dict:
+    """Pages-read-per-token on quality-gated successes.
+
+    Returns:
+      gated_pages, gated_pct (of corpus rows), tok_sum, tok_per_page,
+      pages_per_1k (gated pages per 1000 output tokens; higher = better).
+    Failed / ungated pages add neither pages nor tokens.
+    """
+    n = len(rows)
+    gated = [r for r in rows if r.get("gated")]
+    n_gated = len(gated)
+    tok_sum = sum(int(r.get("tokens") or 0) for r in gated)
+    return {
+        "gated_pages": n_gated,
+        "gated_pct": round(100.0 * n_gated / n, 1) if n else 0.0,
+        "tok_sum": tok_sum,
+        "tok_per_page": round(tok_sum / n_gated, 1) if n_gated else None,
+        "pages_per_1k": round(n_gated / tok_sum * 1000, 3) if tok_sum else None,
+    }

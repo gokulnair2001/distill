@@ -101,15 +101,25 @@ def main() -> None:
                 outputs[r.name] = res.markdown
                 if "basics" in layers:
                     row_metrics["coverage"] = metrics.coverage_ok(res.markdown)
-                if "efficiency" in layers:
-                    row_metrics["tokens"] = metrics.est_tokens(res.markdown)
                 if "structural" in layers and expected:
                     row_metrics["structural"] = metrics.structural_scores(res.markdown, expected)
+                if "efficiency" in layers:
+                    row_metrics["tokens"] = metrics.est_tokens(res.markdown)
+                    # Quality-gated "page read" for pages-per-token scoring.
+                    # Prefer structural when present so empty code-dropping
+                    # dumps don't count as useful reads.
+                    row_metrics["gated"] = metrics.gated_ok(
+                        res.markdown,
+                        row_metrics.get("structural"),
+                        expected,
+                    )
                 if "content" in layers and gold:
                     row_metrics["content"] = metrics.content_scores(res.markdown, gold)
             else:
                 if "basics" in layers:
                     row_metrics["coverage"] = False
+                if "efficiency" in layers:
+                    row_metrics["gated"] = False
             per_tool[r.name].append(row_metrics)
             status = "ok" if res.ok else f"FAIL ({res.error[:60]})"
             extra = f" {row_metrics.get('tokens','')}tok" if res.ok else ""
@@ -157,6 +167,17 @@ def _avg(vals: list[float]) -> float | None:
     return round(statistics.mean(vals), 3) if vals else None
 
 
+def _common_gated_ids(per_tool: dict[str, list[dict]]) -> set[str]:
+    """Page ids that every tool quality-gated (fair same-page efficiency set)."""
+    ids_sets: list[set[str]] = []
+    for rows in per_tool.values():
+        if not rows:
+            continue
+        ids_sets.append({r["id"] for r in rows if r.get("gated")})
+    if not ids_sets:
+        return set()
+    return set.intersection(*ids_sets)
+
 def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
     print("\n" + "=" * 70)
     print("SCORECARD (averaged over corpus)")
@@ -164,7 +185,7 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
 
     cols = ["tool", "n", "cover%", "e2e_ms", "proc_ms"]
     if "efficiency" in layers:
-        cols.append("avg_tok")
+        cols += ["avg_tok", "gated%", "tok/page", "pages/1k"]
     if "structural" in layers:
         cols.append("struct")
     if "content" in layers:
@@ -190,7 +211,15 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
             f"{proc:.0f}" if proc is not None else "-",
         ]
         if "efficiency" in layers:
+            eff = metrics.efficiency_pages_per_token(rows)
             cells.append(str(_avg([r.get("tokens") for r in rows]) or "-"))
+            cells.append(f"{eff['gated_pct']:.0f}")
+            cells.append(
+                f"{eff['tok_per_page']:.0f}" if eff["tok_per_page"] is not None else "-"
+            )
+            cells.append(
+                f"{eff['pages_per_1k']:.3f}" if eff["pages_per_1k"] is not None else "-"
+            )
         if "structural" in layers:
             cells.append(str(_avg([r.get("structural", {}).get("_mean") for r in rows]) or "-"))
         if "content" in layers:
@@ -202,6 +231,33 @@ def report(per_tool: dict[str, list[dict]], layers: list[str]) -> None:
         det = [r.get("deterministic") for r in rows if "deterministic" in r]
         cells.append("yes" if det and all(det) else ("no" if det else "-"))
         print("| " + " | ".join(cells) + " |")
+
+    if "efficiency" in layers:
+        print("\nQuality-gated efficiency — pages read per 1k output tokens")
+        print("(higher pages/1k is better; gate = ≥200 chars, and if source had")
+        print("code blocks keep ≥1. Stubs/failures count as 0 pages. tok/page is")
+        print("mean tokens on gated pages only. Common-set = pages every tool gated.)")
+        print("| tool | gated | gated% | tok/page | pages/1k | pages/1k (common) |")
+        print("|---|---|---|---|---|---|")
+        common = _common_gated_ids(per_tool)
+        for tool, rows in per_tool.items():
+            if not rows:
+                continue
+            eff = metrics.efficiency_pages_per_token(rows)
+            common_rows = [r for r in rows if r.get("id") in common]
+            # On the common set every tool gated; score tokens only.
+            common_eff = metrics.efficiency_pages_per_token(
+                [{**r, "gated": True} for r in common_rows if r.get("tokens") is not None]
+            ) if common_rows else {"pages_per_1k": None}
+            cells = [
+                tool,
+                str(eff["gated_pages"]),
+                f"{eff['gated_pct']:.0f}",
+                f"{eff['tok_per_page']:.0f}" if eff["tok_per_page"] is not None else "-",
+                f"{eff['pages_per_1k']:.3f}" if eff["pages_per_1k"] is not None else "-",
+                f"{common_eff['pages_per_1k']:.3f}" if common_eff.get("pages_per_1k") is not None else "-",
+            ]
+            print("| " + " | ".join(cells) + " |")
 
     if "structural" in layers:
         print("\nStructural preservation by feature — MICRO-average Σkept/Σsource")

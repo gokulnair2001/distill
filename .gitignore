@@ -3,7 +3,11 @@
 Cargo.lock.bak
 .DS_Store
 
+# Local-only notes (not for the public repo)
+README.private.md
+
 # bench
 bench/.venv/
 bench/results/
+bench/.html_cache/
 **/__pycache__/
