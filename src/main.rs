@@ -9,7 +9,7 @@ use url::Url;
 use distill::types::{Document, Options, RenderMode};
 use distill::{distill_html, distill_url, parse_base};
 
-/// distill — convert any website into clean, agent-ready Markdown.
+/// distill — convert any website into clean Markdown or opt-in agent-ready JSON.
 #[derive(Parser, Debug)]
 #[command(name = "distill", version, about, long_about = None)]
 struct Cli {
