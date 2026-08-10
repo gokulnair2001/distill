@@ -92,7 +92,26 @@ distill <url> \
   --raw \              # skip main-content extraction (convert whole page)
   --base <url> \       # base for resolving relative links
   -o out.md            # write to a file (or a directory, for multiple inputs)
+
+# Agent-ready JSON (opt-in): sectioned Markdown + RAG chunks + schema
+distill <url> --agent-ready        # long form
+distill <url> --ars                # alias
+distill <url> -A -o page.json      # short form
 ```
+
+### Agent-ready output (`--agent-ready` / `--ars` / `-A`)
+
+Default output stays plain Markdown. With `--agent-ready`, Distill emits JSON
+with three layers agents can use without re-parsing a flat blob:
+
+| Field | What it is |
+|---|---|
+| `sectioned_markdown` | Normalized headings + a Contents outline |
+| `chunks` | RAG units: `{id, heading, level, text, source}` |
+| `schema` | Structured extract: meta, outline, links, tables, code blocks |
+
+Deterministic and local — no LLM. Same extract/convert pipeline; only the
+final shape changes.
 
 ### JavaScript rendering
 
@@ -117,9 +136,9 @@ point at a specific binary. If none is found, distill falls back to static HTML.
 
 ## How it works
 
-```
-URL → fetch → (render?) → metadata → clean → extract → convert → Markdown
-```
+<p align="center">
+  <img src="assets/distill-pipeline.svg" alt="distill: NOISE → fetch → clean → extract → convert → SIGNAL Markdown, with optional browser when needed" width="960" />
+</p>
 
 1. **fetch** — Download the page with browser-like headers; follow redirects;
    decode gzip/brotli and character encodings.
@@ -188,7 +207,7 @@ Expose distill as tools any local agent can call
 | `distill_html` | Convert HTML you already have — no network |
 
 Same knobs as the CLI (`include_links`, `include_images`, `frontmatter`, `raw`,
-`base`; URL tools also take `render`).
+`base`, `agent_ready`; URL tools also take `render`).
 
 ```bash
 # Register with Claude Code (published package)
@@ -268,9 +287,10 @@ methodology notes live in [bench/README.md](bench/README.md).
 - [x] JS rendering — static-first, Chrome only when needed
 - [x] Benchmark harness vs cloud and local alternatives (`bench/`)
 - [x] MCP server (`distill_url` / `distill_urls` / `distill_html`, SSRF-guarded)
+- [x] Agent-ready structure — opt-in `--agent-ready` / `--ars` (sectioned MD + RAG chunks + schema)
 - [ ] Page-type awareness — distinct strategies for docs / listings / tables
 - [ ] More structural fidelity — colspan/rowspan, `<picture>` / `srcset`, …
-- [ ] Structured extraction — schema-guided JSON + RAG chunking
+- [ ] Schema-guided extraction — caller-supplied JSON schema (LLM or rules)
 
 ---
 
@@ -281,6 +301,10 @@ cargo test                     # unit + integration tests
 cargo test --features mcp      # include the MCP server
 cargo build --release
 ```
+
+For LLM-facing checks of Distill’s Markdown / `--agent-ready` JSON on a fixed
+12-URL corpus, see [`bench/llm_suite/`](bench/llm_suite/)
+(`python3 bench/llm_suite/generate.py` → gitignored `out/`).
 
 ## License
 
