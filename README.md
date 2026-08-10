@@ -302,6 +302,10 @@ cargo test --features mcp      # include the MCP server
 cargo build --release
 ```
 
+For LLM-facing checks of Distill’s Markdown / `--agent-ready` JSON on a fixed
+12-URL corpus, see [`bench/llm_suite/`](bench/llm_suite/)
+(`python3 bench/llm_suite/generate.py` → gitignored `out/`).
+
 ## License
 
 GNU General Public License v3.0 or later — see [LICENSE](LICENSE).
