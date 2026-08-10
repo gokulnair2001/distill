@@ -43,8 +43,14 @@ struct Cli {
     #[arg(long, default_value = "auto")]
     render: String,
 
+    /// Emit agent-ready JSON (sectioned Markdown + RAG chunks + schema) instead
+    /// of plain Markdown. Off by default — same pipeline, structured output.
+    #[arg(long = "agent-ready", visible_alias = "ars", short = 'A')]
+    agent_ready: bool,
+
     /// Output destination. For a single input this is a file (default: stdout).
-    /// For multiple inputs it is a directory that receives one `<slug>.md` per input.
+    /// For multiple inputs it is a directory that receives one `<slug>.md`
+    /// (or `.json` with `--agent-ready`) per input.
     #[arg(short, long)]
     output: Option<String>,
 }
@@ -67,16 +73,24 @@ fn main() -> Result<()> {
     }
 
     if cli.inputs.len() == 1 {
-        run_single(&cli.inputs[0], &opts, cli.output.as_deref())
+        run_single(&cli.inputs[0], &opts, cli.output.as_deref(), cli.agent_ready)
     } else {
-        run_batch(&cli.inputs, &opts, cli.output.as_deref())
+        run_batch(&cli.inputs, &opts, cli.output.as_deref(), cli.agent_ready)
+    }
+}
+
+fn render_doc(doc: &Document, opts: &Options, agent_ready: bool) -> String {
+    if agent_ready {
+        doc.render_agent_ready()
+    } else {
+        doc.render(opts.frontmatter)
     }
 }
 
 /// Single input: write to `-o <file>` or stdout (the original behavior).
-fn run_single(input: &str, opts: &Options, output: Option<&str>) -> Result<()> {
+fn run_single(input: &str, opts: &Options, output: Option<&str>, agent_ready: bool) -> Result<()> {
     let doc = distill_input(input, opts)?;
-    let rendered = doc.render(opts.frontmatter);
+    let rendered = render_doc(&doc, opts, agent_ready);
     match output {
         Some(path) => {
             std::fs::write(path, &rendered).with_context(|| format!("writing {path}"))?;
@@ -92,12 +106,19 @@ fn run_single(input: &str, opts: &Options, output: Option<&str>) -> Result<()> {
 }
 
 /// Multiple inputs. With `-o <dir>` each input is written to its own
-/// `<dir>/<slug>.md`; without `-o` they are concatenated to stdout with a
-/// per-input delimiter. A failing input is reported but does not stop the
-/// batch; the process exits non-zero if any input failed.
-fn run_batch(inputs: &[String], opts: &Options, output: Option<&str>) -> Result<()> {
+/// `<dir>/<slug>.md` (or `.json` with `--agent-ready`); without `-o` they are
+/// concatenated to stdout with a per-input delimiter. A failing input is
+/// reported but does not stop the batch; the process exits non-zero if any
+/// input failed.
+fn run_batch(
+    inputs: &[String],
+    opts: &Options,
+    output: Option<&str>,
+    agent_ready: bool,
+) -> Result<()> {
     let mut used = HashSet::new();
     let mut failures = 0usize;
+    let ext = if agent_ready { "json" } else { "md" };
 
     match output {
         Some(dir) => {
@@ -107,8 +128,8 @@ fn run_batch(inputs: &[String], opts: &Options, output: Option<&str>) -> Result<
                 match distill_input(input, opts) {
                     Ok(doc) => {
                         let slug = unique_slug(&slugify(input), &mut used);
-                        let path = Path::new(dir).join(format!("{slug}.md"));
-                        let rendered = doc.render(opts.frontmatter);
+                        let path = Path::new(dir).join(format!("{slug}.{ext}"));
+                        let rendered = render_doc(&doc, opts, agent_ready);
                         std::fs::write(&path, &rendered)
                             .with_context(|| format!("writing {}", path.display()))?;
                         eprintln!("wrote {} bytes to {}", rendered.len(), path.display());
@@ -127,7 +148,7 @@ fn run_batch(inputs: &[String], opts: &Options, output: Option<&str>) -> Result<
                 match distill_input(input, opts) {
                     Ok(doc) => {
                         writeln!(lock, "<!-- distill: {input} -->")?;
-                        lock.write_all(doc.render(opts.frontmatter).as_bytes())?;
+                        lock.write_all(render_doc(&doc, opts, agent_ready).as_bytes())?;
                         writeln!(lock, "\n")?;
                     }
                     Err(e) => {

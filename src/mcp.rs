@@ -37,11 +37,15 @@ pub struct ConvOptions {
     /// Keep images as `![alt](src)`. Default: true.
     pub include_images: Option<bool>,
     /// Prepend a YAML frontmatter block with page metadata. Default: true.
+    /// Ignored when `agent_ready` is true (metadata lives in the JSON schema).
     pub frontmatter: Option<bool>,
     /// Skip main-content extraction; convert the whole cleaned page. Default: false.
     pub raw: Option<bool>,
     /// Base URL for resolving relative links/images to absolute URLs.
     pub base: Option<String>,
+    /// When true, return agent-ready JSON (sectioned Markdown + RAG chunks +
+    /// schema) instead of plain Markdown. Default: false.
+    pub agent_ready: Option<bool>,
 }
 
 /// Arguments for `distill_url`.
@@ -102,8 +106,9 @@ impl DistillServer {
     #[tool(
         description = "Fetch a URL and convert the page into clean, agent-ready Markdown. \
         Boilerplate is stripped, structure (tables, code, nested lists) preserved, links \
-        resolved to absolute URLs, and page metadata included as YAML frontmatter. Requests \
-        to private/loopback/link-local addresses are refused (SSRF guard)."
+        resolved to absolute URLs, and page metadata included as YAML frontmatter. Set \
+        agent_ready=true for JSON with sectioned Markdown, RAG chunks, and a structured \
+        schema. Requests to private/loopback/link-local addresses are refused (SSRF guard)."
     )]
     async fn distill_url(
         &self,
@@ -112,10 +117,17 @@ impl DistillServer {
         let render = parse_render(p.render.as_deref())?;
         let opts = build_options(&p.options, render)?;
         let frontmatter = opts.frontmatter;
+        let agent_ready = p.options.agent_ready.unwrap_or(false);
         let url = p.url;
 
         let markdown = tokio::task::spawn_blocking(move || {
-            crate::distill_url(&url, opts).map(|doc| doc.render(frontmatter))
+            crate::distill_url(&url, opts).map(|doc| {
+                if agent_ready {
+                    doc.render_agent_ready()
+                } else {
+                    doc.render(frontmatter)
+                }
+            })
         })
         .await
         .map_err(|e| McpError::internal_error(format!("conversion task failed: {e}"), None))?
@@ -148,6 +160,7 @@ impl DistillServer {
         let render = parse_render(p.render.as_deref())?;
         let opts = build_options(&p.options, render)?;
         let frontmatter = opts.frontmatter;
+        let agent_ready = p.options.agent_ready.unwrap_or(false);
 
         // Spawn every URL up front; a semaphore caps how many fetch at once.
         let sem = Arc::new(Semaphore::new(BATCH_CONCURRENCY));
@@ -160,7 +173,13 @@ impl DistillServer {
                 let _permit = sem.acquire_owned().await.ok();
                 let u = url.clone();
                 let res = tokio::task::spawn_blocking(move || {
-                    crate::distill_url(&u, opts).map(|doc| doc.render(frontmatter))
+                    crate::distill_url(&u, opts).map(|doc| {
+                        if agent_ready {
+                            doc.render_agent_ready()
+                        } else {
+                            doc.render(frontmatter)
+                        }
+                    })
                 })
                 .await;
                 (url, res)
@@ -198,10 +217,16 @@ impl DistillServer {
     ) -> Result<CallToolResult, McpError> {
         let opts = build_options(&p.options, RenderMode::Never)?;
         let frontmatter = opts.frontmatter;
+        let agent_ready = p.options.agent_ready.unwrap_or(false);
         let html = p.html;
 
         let markdown = tokio::task::spawn_blocking(move || {
-            crate::distill_html(&html, &opts).render(frontmatter)
+            let doc = crate::distill_html(&html, &opts);
+            if agent_ready {
+                doc.render_agent_ready()
+            } else {
+                doc.render(frontmatter)
+            }
         })
         .await
         .map_err(|e| McpError::internal_error(format!("conversion task failed: {e}"), None))?;
@@ -296,6 +321,7 @@ mod tests {
             frontmatter: Some(false),
             raw: Some(true),
             base: Some("https://example.com/docs/".into()),
+            agent_ready: Some(true),
         });
         assert!(!o.include_links && !o.include_images && !o.frontmatter && o.raw);
         assert_eq!(o.base_url.unwrap().as_str(), "https://example.com/docs/");
@@ -339,6 +365,36 @@ mod tests {
         assert!(text.contains("# Title"), "got: {text}");
         assert!(text.contains("(https://example.com/x)"), "got: {text}");
         assert!(text.contains("title: Hi"), "frontmatter missing: {text}");
+    }
+
+    #[tokio::test]
+    async fn distill_html_agent_ready_returns_json_layers() {
+        let server = DistillServer::new();
+        let params = HtmlParams {
+            html: "<html><head><title>Hi</title></head><body><main>\
+                   <h1>Title</h1><p>Hello <a href=\"/x\">link</a> with enough words here.</p>\
+                   <h2>API</h2>\
+                   <table><tr><th>Name</th><th>Type</th></tr>\
+                   <tr><td>id</td><td>string</td></tr></table>\
+                   </main></body></html>"
+                .into(),
+            options: ConvOptions {
+                base: Some("https://example.com".into()),
+                agent_ready: Some(true),
+                ..Default::default()
+            },
+        };
+        let result = server.distill_html(Parameters(params)).await.unwrap();
+        let text = result
+            .content
+            .iter()
+            .find_map(|c| c.as_text().map(|t| t.text.clone()))
+            .expect("text content");
+        assert!(text.contains("\"sectioned_markdown\""), "got: {text}");
+        assert!(text.contains("\"chunks\""), "got: {text}");
+        assert!(text.contains("\"schema\""), "got: {text}");
+        assert!(text.contains("https://example.com/x"), "got: {text}");
+        assert!(text.contains("chunk-"), "got: {text}");
     }
 
     #[tokio::test]

@@ -2,6 +2,7 @@
 //!
 //! Pipeline: fetch → (render?) → metadata → clean → extract → convert.
 
+pub mod agent_ready;
 pub mod clean;
 pub mod convert;
 pub mod extract;

@@ -94,6 +94,11 @@ impl Document {
         out.push_str(&self.markdown);
         out
     }
+
+    /// Render the opt-in agent-ready JSON (sectioned Markdown + RAG chunks + schema).
+    pub fn render_agent_ready(&self) -> String {
+        crate::agent_ready::render(self)
+    }
 }
 
 /// Minimal YAML scalar escaping: quote when the value contains characters that
