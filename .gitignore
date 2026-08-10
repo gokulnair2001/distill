@@ -10,4 +10,5 @@ README.private.md
 bench/.venv/
 bench/results/
 bench/.html_cache/
+bench/llm_suite/out/
 **/__pycache__/
