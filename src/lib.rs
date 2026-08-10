@@ -1,4 +1,4 @@
-//! distill — convert any website into clean Markdown or opt-in agent-ready JSON.
+//! distill — convert any website into clean, agent-ready Markdown.
 //!
 //! Pipeline: fetch → (render?) → metadata → clean → extract → convert.
 

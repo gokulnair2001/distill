@@ -248,9 +248,9 @@ impl ServerHandler for DistillServer {
         info.server_info = server_info;
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
         info.instructions = Some(
-            "Convert a URL or raw HTML into clean, deterministic Markdown, or set \
-            agent_ready=true for structured JSON (sectioned Markdown + RAG chunks + schema). \
-            Use distill_url for a live page, distill_html for HTML you already hold."
+            "Convert a URL or raw HTML into clean, deterministic, agent-ready Markdown. \
+            Use distill_url for a live page, distill_html for HTML you already hold. \
+            Optional: agent_ready=true returns structured JSON (sectioned Markdown + chunks + schema)."
                 .into(),
         );
         info

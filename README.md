@@ -1,7 +1,6 @@
 # distill
 
-**Turn any webpage into clean Markdown — or structured agent-ready JSON — that
-an AI agent can actually use.**
+**Turn any webpage into clean Markdown an AI agent can actually use.**
 
 `distill` is a local CLI (and MCP server) that takes a URL or HTML file and
 returns Markdown with:
@@ -11,18 +10,11 @@ returns Markdown with:
 - relative links resolved to absolute URLs
 - title / author / date in a YAML frontmatter block
 
-Opt into `--agent-ready` for JSON with sectioned Markdown, RAG chunks, and a
-structured schema (outline, links, tables, code) — same pipeline, agent-shaped
-output.
-
-No cloud API. No per-page cost. Same input → same output every time.
+No cloud API. No per-page cost. Same input → same Markdown every time.
 
 ```bash
 distill https://en.wikipedia.org/wiki/Markdown
 # → clean Markdown on stdout
-
-distill https://en.wikipedia.org/wiki/Markdown --agent-ready
-# → sectioned Markdown + chunks + schema as JSON
 ```
 
 ---
@@ -32,7 +24,7 @@ distill https://en.wikipedia.org/wiki/Markdown --agent-ready
 | | |
 |---|---|
 | **Input** | A URL, an HTML file, or HTML on stdin |
-| **Output** | Clean Markdown (+ optional YAML metadata), or opt-in agent-ready JSON |
+| **Output** | Clean Markdown (+ optional YAML metadata) |
 | **Where it runs** | On your machine — nothing is sent to a cloud service |
 | **Who it's for** | Agents and developers who need docs, tables, and product pages — not just news articles |
 
@@ -42,8 +34,8 @@ that: **structural fidelity first**, then speed and privacy.
 
 **Ways to use it**
 
-- **CLI** — `distill <url>` (Markdown) or `distill <url> --agent-ready` (JSON)
-- **MCP server** — tools `distill_url`, `distill_urls`, `distill_html` for local agents (Claude Code, etc.; set `agent_ready: true` for structured JSON)
+- **CLI** — `distill <url>` in a shell or script
+- **MCP server** — tools `distill_url`, `distill_urls`, `distill_html` for local agents (Claude Code, etc.)
 
 > Published as **`distill-md`** on crates.io / npm (the name `distill` is taken).
 > The installed commands are still `distill` and `distill-mcp`.

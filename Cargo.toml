@@ -5,7 +5,7 @@
 name = "distill-md"
 version = "0.2.1"
 edition = "2021"
-description = "Convert any website into clean Markdown or opt-in agent-ready JSON (chunks + schema). Local-first, fast, deterministic."
+description = "Convert any website into clean, agent-ready Markdown. Local-first, fast, deterministic."
 license = "GPL-3.0-or-later"
 repository = "https://github.com/gokulnair2001/distill"
 homepage = "https://github.com/gokulnair2001/distill"
