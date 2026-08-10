@@ -3,7 +3,7 @@
 # so `use distill::…` and the `distill` command are unchanged.
 [package]
 name = "distill-md"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "Convert any website into clean, agent-ready Markdown. Local-first, fast, deterministic."
 license = "GPL-3.0-or-later"
