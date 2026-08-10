@@ -88,7 +88,8 @@
       </a>
       <div class="flex items-center gap-6 text-sm text-[var(--muted)]">
         <a href="#try" class="hidden sm:inline hover:text-ink transition">Try it</a>
-        <a href="#numbers" class="hidden sm:inline hover:text-ink transition">Numbers</a>
+        <a href="#agent-ready" class="hidden sm:inline hover:text-ink transition">Agents</a>
+        <a href="#numbers" class="hidden lg:inline hover:text-ink transition">Numbers</a>
         <a href="#install" class="hover:text-ink transition">Install</a>
         <a href="https://github.com/gokulnair2001/distill" class="hover:text-ink transition">GitHub&nbsp;↗</a>
       </div>
@@ -272,10 +273,104 @@
           <p class="mt-1.5 text-sm leading-relaxed">Real tables, fenced code with language tags, nested lists, blockquotes.</p>
         </div>
         <div>
+          <h3 class="font-semibold text-ink">Agent-ready JSON</h3>
+          <p class="mt-1.5 text-sm leading-relaxed">
+            Opt-in <span class="font-mono text-ink">--agent-ready</span>: sectioned Markdown, RAG chunks, and a schema layer —
+            <a href="#agent-ready" class="text-ink underline underline-offset-4 hover:no-underline">see how</a>.
+          </p>
+        </div>
+        <div>
           <h3 class="font-semibold text-ink">Metadata &amp; links</h3>
           <p class="mt-1.5 text-sm leading-relaxed">Title, author, date in YAML frontmatter; relative links resolved absolute.</p>
         </div>
       </div>
+    </section>
+
+    <!-- ===== Agent-ready ===== -->
+    <section id="agent-ready" class="scroll-mt-20 border-t border-[var(--line)] py-14">
+      <p class="reveal font-mono text-xs font-medium tracking-wide text-ink">
+        opt-in · <span class="text-[var(--muted)]">--agent-ready</span>
+      </p>
+      <h2 class="reveal mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-ink sm:text-4xl" style="transition-delay:.05s">
+        Want clean data for your agents?
+      </h2>
+      <p class="reveal mt-4 max-w-2xl text-base leading-relaxed" style="transition-delay:.1s">
+        Markdown is the default — and the right default. When your pipeline needs more than a
+        flat blob, flip on agent-ready JSON: the same local extract, reshaped into three layers
+        agents can retrieve, cite, and query without re-parsing the page.
+      </p>
+
+      <div class="reveal mt-10 grid gap-8 sm:grid-cols-3" style="transition-delay:.12s">
+        <div>
+          <p class="font-mono text-xs font-medium tracking-wide text-ink">01 · sectioned_markdown</p>
+          <p class="mt-2 text-sm leading-relaxed">
+            Normalized headings plus a Contents outline — readable prose that still knows its shape.
+          </p>
+        </div>
+        <div>
+          <p class="font-mono text-xs font-medium tracking-wide text-ink">02 · chunks</p>
+          <p class="mt-2 text-sm leading-relaxed">
+            RAG units with <span class="font-mono text-ink">id</span>, heading, level, text, and source —
+            ready to embed or hand to a retriever.
+          </p>
+        </div>
+        <div>
+          <p class="font-mono text-xs font-medium tracking-wide text-ink">03 · schema</p>
+          <p class="mt-2 text-sm leading-relaxed">
+            Structured extract: meta, outline, links, tables, and code blocks — no LLM rewrite.
+          </p>
+        </div>
+      </div>
+
+      <div class="reveal mt-10 overflow-hidden rounded-md border border-[var(--line)] bg-white/60" style="transition-delay:.16s">
+        <div class="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+          <p class="font-mono text-xs text-[var(--muted)]">page.agent-ready.json · shape</p>
+          <p class="text-xs text-[var(--muted)]">deterministic · local</p>
+        </div>
+        <pre class="mono-tight overflow-x-auto px-4 py-4 text-[13px] leading-relaxed text-ink"><code><span class="text-[var(--muted)]">{</span>
+  <span class="text-ink">"sectioned_markdown"</span>: <span class="text-[var(--muted)]">"# Widget Docs\n\n## Contents\n- Install\n- API\n…"</span>,
+  <span class="text-ink">"chunks"</span>: [
+    { <span class="text-ink">"id"</span>: <span class="text-[var(--muted)]">"chunk-1"</span>, <span class="text-ink">"heading"</span>: <span class="text-[var(--muted)]">"Install"</span>, <span class="text-ink">"text"</span>: <span class="text-[var(--muted)]">"…"</span>, <span class="text-ink">"source"</span>: <span class="text-[var(--muted)]">"https://…"</span> }
+  ],
+  <span class="text-ink">"schema"</span>: {
+    <span class="text-ink">"title"</span>: <span class="text-[var(--muted)]">"Widget Docs"</span>,
+    <span class="text-ink">"outline"</span>: <span class="text-[var(--muted)]">[…]</span>,
+    <span class="text-ink">"links"</span>: <span class="text-[var(--muted)]">[…]</span>,
+    <span class="text-ink">"tables"</span>: <span class="text-[var(--muted)]">[…]</span>,
+    <span class="text-ink">"code_blocks"</span>: <span class="text-[var(--muted)]">[…]</span>
+  }
+<span class="text-[var(--muted)]">}</span></code></pre>
+      </div>
+
+      <div class="reveal mt-8 grid gap-5 md:grid-cols-2" style="transition-delay:.2s">
+        <div>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">CLI</p>
+          <div class="code-wrap group relative">
+            <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-sm leading-relaxed text-ink"><code data-copy>distill https://example.com/docs --agent-ready
+distill https://example.com/docs --ars -o page.json
+distill https://example.com/docs -A</code></pre>
+            <button class="copy-btn absolute right-2 top-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
+          </div>
+        </div>
+        <div>
+          <p class="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">MCP</p>
+          <div class="code-wrap group relative">
+            <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-sm leading-relaxed text-ink"><code data-copy>{
+  "name": "distill_url",
+  "arguments": {
+    "url": "https://example.com/docs",
+    "agent_ready": true
+  }
+}</code></pre>
+            <button class="copy-btn absolute right-2 top-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:text-ink" data-copy-btn>Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="reveal mt-6 max-w-2xl text-sm leading-relaxed" style="transition-delay:.24s">
+        Default output stays plain Markdown. Agent-ready only changes the final shape —
+        same extract pipeline, no cloud call, same bytes on re-run.
+      </p>
     </section>
 
     <!-- ===== Install ===== -->
@@ -341,7 +436,10 @@ distill https://a.com https://b.com -o out/</code></pre>
         server and any local agent (Claude Code, etc.) can call
         <span class="font-mono text-ink">distill_url</span>,
         <span class="font-mono text-ink">distill_urls</span>,
-        <span class="font-mono text-ink">distill_html</span>. SSRF-guarded by default.
+        <span class="font-mono text-ink">distill_html</span>.
+        Pass <span class="font-mono text-ink">agent_ready: true</span> when you want the
+        <a href="#agent-ready" class="text-ink underline underline-offset-4 hover:no-underline">three-layer JSON</a>.
+        SSRF-guarded by default.
       </p>
       <div class="reveal code-wrap group relative mt-6">
         <pre class="mono-tight overflow-x-auto rounded-md border border-[var(--line)] bg-white/70 px-4 py-3 text-sm text-ink"><code data-copy>claude mcp add distill -- npx -y -p distill-md distill-mcp</code></pre>
