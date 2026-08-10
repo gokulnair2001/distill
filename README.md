@@ -136,9 +136,9 @@ point at a specific binary. If none is found, distill falls back to static HTML.
 
 ## How it works
 
-```
-URL → fetch → (render?) → metadata → clean → extract → convert → Markdown
-```
+<p align="center">
+  <img src="assets/distill-pipeline.svg" alt="distill: NOISE → fetch → clean → extract → convert → SIGNAL Markdown, with optional browser when needed" width="960" />
+</p>
 
 1. **fetch** — Download the page with browser-like headers; follow redirects;
    decode gzip/brotli and character encodings.
